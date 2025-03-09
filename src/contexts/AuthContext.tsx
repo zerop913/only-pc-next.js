@@ -1,0 +1,202 @@
+"use client";
+
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+} from "react";
+import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { LoginSchema, RegisterSchema } from "@/services/authService";
+
+// Тип данных пользователя
+export interface User {
+  id: number;
+  email: string;
+  roleId: number;
+}
+
+// Интерфейс контекста авторизации
+interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isInitialized: boolean;
+  user: User | null;
+  error: string | null;
+  login: (data: z.infer<typeof LoginSchema>) => Promise<void>;
+  register: (data: z.infer<typeof RegisterSchema>) => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+}
+
+// Создаем контекст
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Время между проверками токена (в мс) - 5 минут
+const TOKEN_CHECK_INTERVAL = 5 * 60 * 1000;
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Устанавливаем true по умолчанию
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Функция проверки авторизации (выделена для переиспользования)
+  const checkAuth = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/auth/check", {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsAuthenticated(data.authenticated);
+        setUser(data.authenticated ? data.user : null);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+
+      // Отмечаем, что первичная инициализация завершена
+      if (!isInitialized) {
+        setIsInitialized(true);
+      }
+    } catch (err) {
+      console.error("Ошибка проверки аутентификации:", err);
+      setIsAuthenticated(false);
+      setUser(null);
+
+      if (!isInitialized) {
+        setIsInitialized(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isInitialized]);
+
+  // Проверяем состояние аутентификации при инициализации хука
+  useEffect(() => {
+    checkAuth();
+
+    // Настраиваем периодическую проверку токена
+    const intervalId = setInterval(() => {
+      checkAuth();
+    }, TOKEN_CHECK_INTERVAL);
+
+    // Также проверяем при фокусе на вкладке
+    const handleFocus = () => {
+      checkAuth();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [checkAuth]);
+
+  const login = async (data: z.infer<typeof LoginSchema>) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Ошибка входа");
+      }
+
+      // Немедленно проверяем авторизацию после успешного входа
+      await checkAuth();
+      router.push("/configurator");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Произошла неизвестная ошибка"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (data: z.infer<typeof RegisterSchema>) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Ошибка регистрации");
+      }
+
+      router.push("/login");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Произошла неизвестная ошибка"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    setIsLoading(true);
+
+    try {
+      // Перенаправляем напрямую на API-маршрут логаута
+      window.location.href = "/logout";
+    } catch (err) {
+      console.error("Ошибка при выходе:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const value = {
+    isAuthenticated,
+    isLoading,
+    isInitialized,
+    user,
+    error,
+    login,
+    register,
+    logout,
+    checkAuth,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Хук для использования контекста авторизации
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

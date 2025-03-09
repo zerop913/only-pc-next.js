@@ -1,0 +1,23 @@
+@import "@fontsource/montserrat-alternates";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Montserrat Alternates", sans-serif;
+  }
+}
+
+body {
+  font-family: "Montserrat Alternates", sans-serif;
+}
+
+.fallback-icon {
+  display: none;
+}
+
+.fallback-icon-visible .fallback-icon {
+  display: flex;
+}
