@@ -7,24 +7,25 @@ export interface ProductFilters {
   characteristics?: Record<string, string[]>;
 }
 
-export const parseFilterQueryString = (
-  queryString: string | null | undefined
-): ProductFilters => {
-  const params = new URLSearchParams(queryString || "");
+export const parseFilterQueryString = (queryString: string): ProductFilters => {
+  const params = new URLSearchParams(queryString);
   const filters: ProductFilters = {};
 
-  // Parse price range
+  // Обрабатываем цены
   const priceMin = params.get("priceMin");
   const priceMax = params.get("priceMax");
   if (priceMin) filters.priceMin = Number(priceMin);
   if (priceMax) filters.priceMax = Number(priceMax);
 
-  // Parse brands
+  // Обрабатываем бренды
   const brands = params.getAll("brand");
-  if (brands.length > 0) filters.brands = brands;
+  if (brands.length > 0) {
+    filters.brands = brands;
+  }
 
-  // Parse characteristics
+  // Обрабатываем характеристики
   const characteristics: Record<string, string[]> = {};
+
   for (const [key, value] of params.entries()) {
     if (key.startsWith("char[") && key.endsWith("]")) {
       const charSlug = key.slice(5, -1);
@@ -46,32 +47,6 @@ export const filterProducts = (
   products: Product[],
   filters: ProductFilters
 ): Product[] => {
-  return products.filter((product) => {
-    // Фильтрация по цене
-    if (filters.priceMin && product.price < filters.priceMin) return false;
-    if (filters.priceMax && product.price > filters.priceMax) return false;
-
-    // Фильтрация по бренду
-    if (filters.brands && filters.brands.length > 0) {
-      if (!filters.brands.includes(product.brand)) return false;
-    }
-
-    // Фильтрация по характеристикам
-    if (filters.characteristics && product.characteristics) {
-      for (const [charSlug, values] of Object.entries(
-        filters.characteristics
-      )) {
-        if (values.length > 0) {
-          const characteristic = product.characteristics.find(
-            (char) => char.type === charSlug
-          );
-          if (!characteristic || !values.includes(characteristic.value)) {
-            return false;
-          }
-        }
-      }
-    }
-
-    return true;
-  });
+  // Эта функция больше не нужна, так как фильтрация происходит на сервере
+  return products;
 };

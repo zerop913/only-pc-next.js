@@ -16,25 +16,64 @@ import {
   sql,
 } from "drizzle-orm";
 import { redis } from "@/lib/redis";
-import { type Product, type ProductCharacteristic } from "@/types/product";
+import {
+  type Product,
+  type ProductCharacteristic,
+  type CategoryResponse,
+} from "@/types/product";
 import { ProductFilters } from "./filterService";
 
-const CACHE_TTL = 3600;
+const CACHE_TTL = 3600; // 1 час
+const FILTERED_CACHE_TTL = 300; // 5 минут для отфильтрованных результатов
+const PAGE_SIZE = 30;
 
-interface CategoryResponse {
-  hasSubcategories: boolean;
-  subcategories: {
-    id: number;
-    name: string;
-    slug: string;
-    icon: string | null;
-  }[];
+export interface PaginatedProducts {
+  products: Product[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
 }
+
+// Обновляем функцию createFilterCacheKey, объединяя обе версии
+const createFilterCacheKey = (
+  categoryId: number,
+  filters?: ProductFilters,
+  page: number = 1
+): string => {
+  const baseKey = `products_category_${categoryId}_page_${page}`;
+
+  if (!filters || Object.keys(filters).length === 0) {
+    return baseKey;
+  }
+
+  const filterKey = JSON.stringify({
+    priceMin: filters.priceMin,
+    priceMax: filters.priceMax,
+    brands: filters.brands?.sort(),
+    characteristics: Object.entries(filters.characteristics || {}).sort(),
+  });
+
+  return `${baseKey}_filters_${Buffer.from(filterKey).toString("base64")}`;
+};
+
+// Обновляем маппинг продукта
+const mapProduct = (product: any): Product => ({
+  id: product.id,
+  slug: product.slug,
+  title: product.title,
+  price: Number(product.price),
+  brand: product.brand,
+  image: product.image,
+  description: product.description,
+  categoryId: product.categoryId,
+  characteristics: [],
+});
 
 export async function getProductsByCategory(
   categorySlug: string,
+  page: number = 1,
   filters?: ProductFilters
-): Promise<Product[] | CategoryResponse> {
+): Promise<PaginatedProducts | CategoryResponse> {
   // Если нет фильтров, попытаемся использовать кеш
   const cacheKey = `products_category_${categorySlug}`;
   const cachedData = !filters ? await redis.get(cacheKey) : null;
@@ -79,28 +118,16 @@ export async function getProductsByCategory(
     return result;
   }
 
-  // Получаем продукты с применением фильтров
-  const productsQuery = await getFilteredProducts(category[0].id, filters);
-
-  const typedProducts: Product[] = productsQuery.map((product) => ({
-    ...product,
-    price: Number(product.price),
-    characteristics: [],
-  }));
-
-  // Кешируем только если нет фильтров
-  if (!filters) {
-    await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(typedProducts));
-  }
-
-  return typedProducts;
+  // Заменяем старый вызов на новый
+  return getFilteredProducts(category[0].id, page, filters);
 }
 
 export async function getProductsBySubcategory(
   categorySlug: string,
   subcategorySlug: string,
+  page: number = 1,
   filters?: ProductFilters
-): Promise<Product[]> {
+): Promise<PaginatedProducts> {
   // Если нет фильтров, попытаемся использовать кеш
   const cacheKey = `products_subcategory_${categorySlug}_${subcategorySlug}`;
   const cachedData = !filters ? await redis.get(cacheKey) : null;
@@ -135,21 +162,8 @@ export async function getProductsBySubcategory(
     throw new Error("Subcategory not found");
   }
 
-  // Получаем продукты с применением фильтров
-  const productsQuery = await getFilteredProducts(subcategory[0].id, filters);
-
-  const typedProducts: Product[] = productsQuery.map((product) => ({
-    ...product,
-    price: Number(product.price),
-    characteristics: [],
-  }));
-
-  // Кешируем только если нет фильтров
-  if (!filters) {
-    await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(typedProducts));
-  }
-
-  return typedProducts;
+  // Заменяем старый вызов на новый
+  return getFilteredProducts(subcategory[0].id, page, filters);
 }
 
 export async function getProductDetails(
@@ -224,7 +238,7 @@ export async function getProductDetails(
     throw new Error("Product not found");
   }
 
-  // Получаем характеристики продукта
+  // Получаем характеристики продукта с правильной типизацией
   const characteristics = await db
     .select({
       type: characteristicsTypes.name,
@@ -242,20 +256,19 @@ export async function getProductDetails(
       )
     );
 
-  // Фильтруем и преобразуем характеристики
+  // Фильтруем и преобразуем характеристики с правильной типизацией
   const filteredCharacteristics: ProductCharacteristic[] = characteristics
     .filter(
       (char): char is { type: string; value: string } =>
-        char.type !== null && char.type !== undefined
+        typeof char.type === "string" && char.type !== null
     )
-    .map((char) => ({
-      type: char.type,
-      value: char.value,
+    .map(({ type, value }) => ({
+      type,
+      value,
     }));
 
   const productWithCharacteristics: Product = {
-    ...product[0],
-    price: Number(product[0].price),
+    ...mapProduct(product[0]),
     characteristics: filteredCharacteristics,
   };
 
@@ -267,98 +280,188 @@ export async function getProductDetails(
   return productWithCharacteristics;
 }
 
-// Вспомогательная функция для получения отфильтрованных продуктов
-async function getFilteredProducts(
+// Удаляем старую версию getFilteredProducts и оставляем только эту
+export async function getFilteredProducts(
   categoryId: number,
+  page: number = 1,
   filters?: ProductFilters
-) {
-  // Создаем базовый запрос
-  let baseQuery = db
-    .select({
-      id: products.id,
-      slug: products.slug,
-      title: products.title,
-      price: products.price,
-      brand: products.brand,
-      image: products.image,
-      description: products.description,
-      categoryId: products.categoryId,
-    })
-    .from(products);
+): Promise<PaginatedProducts> {
+  const validPage = Math.max(1, page);
+  const cacheKey = createFilterCacheKey(categoryId, filters, validPage);
 
-  // Условия для фильтрации
-  let conditions = [eq(products.categoryId, categoryId)];
-
-  if (filters) {
-    // Применяем фильтр по цене
-    if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
-      conditions.push(
-        between(
-          products.price,
-          Number(filters.priceMin).toString(),
-          Number(filters.priceMax).toString()
-        )
-      );
-    } else if (filters.priceMin !== undefined) {
-      conditions.push(
-        sql`${products.price} >= ${Number(filters.priceMin).toString()}`
-      );
-    } else if (filters.priceMax !== undefined) {
-      conditions.push(
-        sql`${products.price} <= ${Number(filters.priceMax).toString()}`
-      );
+  try {
+    // Пытаемся получить данные из кеша
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      if (parsed.products) return parsed;
     }
 
-    // Применяем фильтр по бренду
-    if (filters.brands && filters.brands.length > 0) {
-      conditions.push(inArray(products.brand, filters.brands));
-    }
+    // Базовый запрос с оптимизированной выборкой
+    let query = db
+      .select({
+        id: products.id,
+        slug: products.slug,
+        title: products.title,
+        price: products.price,
+        brand: products.brand,
+        image: products.image,
+        description: products.description,
+        categoryId: products.categoryId,
+      })
+      .from(products)
+      .where(eq(products.categoryId, categoryId));
 
-    // Получаем ID продуктов, которые соответствуют фильтрам характеристик
-    if (
-      filters.characteristics &&
-      Object.keys(filters.characteristics).length > 0
-    ) {
-      // Для каждого slug характеристики
-      for (const [charSlug, selectedValues] of Object.entries(
-        filters.characteristics
-      )) {
-        if (selectedValues.length > 0) {
-          // Получаем ID типа характеристики по slug
-          const charType = await db
-            .select()
-            .from(characteristicsTypes)
-            .where(eq(characteristicsTypes.slug, charSlug))
-            .limit(1);
+    // Добавляем условия фильтрации
+    const conditions = [eq(products.categoryId, categoryId)];
 
-          if (charType.length > 0) {
-            const charTypeId = charType[0].id;
+    // Оптимизируем применение фильтров
+    if (filters) {
+      // Применяем фильтр по цене
+      if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
+        conditions.push(
+          between(
+            products.price,
+            filters.priceMin.toString(),
+            filters.priceMax.toString()
+          )
+        );
+      } else if (filters.priceMin !== undefined) {
+        conditions.push(
+          sql`${products.price} >= ${filters.priceMin.toString()}`
+        );
+      } else if (filters.priceMax !== undefined) {
+        conditions.push(
+          sql`${products.price} <= ${filters.priceMax.toString()}`
+        );
+      }
 
-            // Получаем ID продуктов, у которых значение этой характеристики
-            // совпадает с одним из выбранных значений
-            const matchingProductIds = await db
-              .select({ productId: productCharacteristics.productId })
-              .from(productCharacteristics)
-              .where(
-                and(
-                  eq(productCharacteristics.characteristicTypeId, charTypeId),
-                  inArray(productCharacteristics.value, selectedValues)
-                )
-              );
+      // Применяем фильтр по бренду
+      if (filters.brands?.length) {
+        conditions.push(inArray(products.brand, filters.brands));
+      }
 
-            if (matchingProductIds.length > 0) {
-              const ids = matchingProductIds.map((p) => p.productId);
-              conditions.push(inArray(products.id, ids));
-            } else {
-              // Если нет продуктов с такими характеристиками, возвращаем пустой результат
-              return [];
+      // Фильтрация по характеристикам
+      if (filters.characteristics) {
+        for (const [slug, values] of Object.entries(filters.characteristics)) {
+          if (values.length) {
+            const charType = await db
+              .select()
+              .from(characteristicsTypes)
+              .where(eq(characteristicsTypes.slug, slug))
+              .limit(1);
+
+            if (charType.length) {
+              const charTypeId = charType[0].id;
+              const matchingProductIds = await db
+                .select({ productId: productCharacteristics.productId })
+                .from(productCharacteristics)
+                .where(
+                  and(
+                    eq(productCharacteristics.characteristicTypeId, charTypeId),
+                    inArray(productCharacteristics.value, values)
+                  )
+                );
+
+              if (matchingProductIds.length) {
+                conditions.push(
+                  inArray(
+                    products.id,
+                    matchingProductIds.map((p) => p.productId)
+                  )
+                );
+              }
             }
           }
         }
       }
     }
-  }
 
-  // Применяем все условия фильтрации
-  return baseQuery.where(and(...conditions)).orderBy(products.price);
+    // Получаем общее количество товаров с оптимизированным запросом
+    const [[{ count }], productsResult] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(and(...conditions)),
+      db
+        .select()
+        .from(products)
+        .where(and(...conditions))
+        .limit(PAGE_SIZE)
+        .offset((validPage - 1) * PAGE_SIZE)
+        // Добавляем стабильную сортировку по нескольким полям
+        .orderBy(products.price, products.id),
+    ]);
+
+    const totalItems = Number(count);
+    const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+    const currentPage = Math.min(validPage, totalPages);
+
+    // Оптимизируем загрузку характеристик
+    const productIds = productsResult.map((p) => p.id);
+    const characteristics =
+      productIds.length > 0
+        ? await db
+            .select({
+              productId: productCharacteristics.productId,
+              type: characteristicsTypes.name,
+              value: productCharacteristics.value,
+            })
+            .from(productCharacteristics)
+            .leftJoin(
+              characteristicsTypes,
+              eq(
+                productCharacteristics.characteristicTypeId,
+                characteristicsTypes.id
+              )
+            )
+            .where(inArray(productCharacteristics.productId, productIds))
+        : [];
+
+    // Формируем результат
+    const result: PaginatedProducts = {
+      products: productsResult.map((product) => ({
+        ...mapProduct(product),
+        characteristics: characteristics
+          .filter((c) => c.productId === product.id)
+          .map(({ type, value }) => ({ type, value })),
+      })),
+      totalItems,
+      totalPages,
+      currentPage,
+    };
+
+    // Кешируем результат
+    const cacheTTL = filters ? FILTERED_CACHE_TTL : CACHE_TTL;
+    await redis.setex(cacheKey, cacheTTL, JSON.stringify(result));
+
+    return result;
+  } catch (error) {
+    console.error("Error in getFilteredProducts:", error);
+    return {
+      products: [],
+      totalItems: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+}
+
+// Добавляем функцию для предварительной загрузки популярных комбинаций фильтров
+export async function prefetchPopularFilters(
+  categoryId: number,
+  page: number = 1
+) {
+  const popularFilters: ProductFilters[] = [
+    {}, // без фильтров
+    { priceMin: 0, priceMax: 15000 }, // бюджетный сегмент
+    { priceMin: 15000, priceMax: 50000 }, // средний сегмент
+    { priceMin: 50000 }, // премиум сегмент
+  ];
+
+  await Promise.all(
+    popularFilters.map((filters) =>
+      getFilteredProducts(categoryId, page, filters)
+    )
+  );
 }

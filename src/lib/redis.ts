@@ -1,4 +1,7 @@
 import { Redis } from "ioredis";
+import IORedis from "ioredis";
+
+const REDIS_CONNECTION_POOL_SIZE = 5;
 
 // Используем Redis только на стороне сервера
 const getRedisInstance = () => {
@@ -11,18 +14,34 @@ const getRedisInstance = () => {
     } as unknown as Redis;
   }
 
-  // Мы на сервере, создаем реальный экземпляр Redis
+  // Мы на сервере, создаем пул соединений Redis
   const globalForRedis = globalThis as unknown as {
     redis: Redis | undefined;
+    redisPool: Redis[] | undefined;
   };
 
-  if (!globalForRedis.redis) {
-    globalForRedis.redis = new Redis(
-      process.env.REDIS_URL || "redis://localhost:6379"
+  if (!globalForRedis.redisPool) {
+    globalForRedis.redisPool = Array.from(
+      { length: REDIS_CONNECTION_POOL_SIZE },
+      () =>
+        new IORedis(process.env.REDIS_URL || "redis://localhost:6379", {
+          maxRetriesPerRequest: 3,
+          enableReadyCheck: false,
+          retryStrategy(times) {
+            const delay = Math.min(times * 50, 2000);
+            return delay;
+          },
+        })
     );
+
+    // Используем первое соединение как основное
+    globalForRedis.redis = globalForRedis.redisPool[0];
   }
 
-  return globalForRedis.redis;
+  // Возвращаем случайное соединение из пула
+  return globalForRedis.redisPool[
+    Math.floor(Math.random() * REDIS_CONNECTION_POOL_SIZE)
+  ];
 };
 
 export const redis = getRedisInstance();

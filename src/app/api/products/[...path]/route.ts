@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getFilteredProducts,
+  getProductDetails,
   getProductsByCategory,
   getProductsBySubcategory,
-  getProductDetails,
 } from "@/services/productService";
 import { getCategoryFilters } from "@/services/filterService";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { ProductFilters } from "@/services/filterService";
+import { eq, and } from "drizzle-orm";
+import { parseFilterParams } from "@/lib/utils/filterUtils";
 
 export async function GET(request: NextRequest) {
   try {
-    // Получаем путь из URL
-    const pathname = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const pathname = url.pathname;
     const pathSegments = pathname
       .split("/")
       .filter(
@@ -21,42 +22,38 @@ export async function GET(request: NextRequest) {
           segment !== "" && segment !== "api" && segment !== "products"
       );
 
-    // Получаем параметры фильтрации из URL
-    const url = new URL(request.url);
-    const filters: ProductFilters = {};
+    // Получаем и валидируем номер страницы
+    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+    const filters = parseFilterParams(url.searchParams);
 
-    // Парсим диапазон цен
-    const priceMin = url.searchParams.get("priceMin");
-    const priceMax = url.searchParams.get("priceMax");
-    if (priceMin) filters.priceMin = Number(priceMin);
-    if (priceMax) filters.priceMax = Number(priceMax);
+    // Проверяем, запрашиваются ли детали продукта
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    const isProductDetails = lastSegment?.includes("-p-");
 
-    // Парсим бренды (могут быть указаны несколько)
-    const brands = url.searchParams.getAll("brand");
-    if (brands.length > 0) filters.brands = brands;
+    if (isProductDetails) {
+      try {
+        const categorySlug = pathSegments[0];
+        const productSlug = lastSegment;
+        const subcategorySlug =
+          pathSegments.length === 3 ? pathSegments[1] : undefined;
 
-    // Парсим характеристики
-    // Формат: char[slug]=value1&char[slug]=value2
-    const characteristics: Record<string, string[]> = {};
-    for (const [key, value] of url.searchParams.entries()) {
-      if (key.startsWith("char[") && key.endsWith("]")) {
-        const charSlug = key.slice(5, -1);
-        if (!characteristics[charSlug]) {
-          characteristics[charSlug] = [];
-        }
-        characteristics[charSlug].push(value);
+        const product = await getProductDetails(
+          categorySlug,
+          productSlug,
+          subcategorySlug
+        );
+        return NextResponse.json(product);
+      } catch (error) {
+        console.error("Product details error:", error);
+        return NextResponse.json(
+          { error: "Product not found" },
+          { status: 404 }
+        );
       }
     }
 
-    if (Object.keys(characteristics).length > 0) {
-      filters.characteristics = characteristics;
-    }
-
-    // Параметр для получения только фильтров
-    const getFiltersOnly = url.searchParams.get("filters") === "true";
-
-    if (getFiltersOnly) {
-      // Если запрос на получение только фильтров
+    // Обработка запроса фильтров
+    if (url.searchParams.get("filters") === "true") {
       if (pathSegments.length === 0) {
         return NextResponse.json(
           { error: "Category is required" },
@@ -64,43 +61,31 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      let categoryId: number;
+      // Сначала находим основную категорию
+      const category = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.slug, pathSegments[0]))
+        .limit(1);
 
-      if (pathSegments.length === 1) {
-        // Получаем ID категории
-        const category = await db
-          .select()
-          .from(categories)
-          .where(eq(categories.slug, pathSegments[0]))
-          .limit(1);
+      if (!category.length) {
+        return NextResponse.json(
+          { error: "Category not found" },
+          { status: 404 }
+        );
+      }
 
-        if (!category.length) {
-          return NextResponse.json(
-            { error: "Category not found" },
-            { status: 404 }
-          );
-        }
-
-        categoryId = category[0].id;
-      } else if (pathSegments.length === 2) {
-        // Получаем ID подкатегории
-        const category = await db
-          .select()
-          .from(categories)
-          .where(eq(categories.slug, pathSegments[0]))
-          .limit(1);
-
-        if (!category.length) {
-          return NextResponse.json(
-            { error: "Category not found" },
-            { status: 404 }
-          );
-        }
-
+      // Теперь проверяем, запрашиваются ли фильтры для подкатегории
+      if (pathSegments.length === 2) {
         const subcategory = await db
           .select()
           .from(categories)
-          .where(eq(categories.slug, pathSegments[1]))
+          .where(
+            and(
+              eq(categories.slug, pathSegments[1]),
+              eq(categories.parentId, category[0].id)
+            )
+          )
           .limit(1);
 
         if (!subcategory.length) {
@@ -110,56 +95,54 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        categoryId = subcategory[0].id;
-      } else {
-        return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+        const filterOptions = await getCategoryFilters(subcategory[0].id);
+        return NextResponse.json(filterOptions);
       }
 
-      const filterOptions = await getCategoryFilters(categoryId);
+      // Если это основная категория, возвращаем её фильтры
+      const filterOptions = await getCategoryFilters(category[0].id);
       return NextResponse.json(filterOptions);
     }
 
-    // Обычные запросы на получение продуктов
-    if (pathSegments.length === 1) {
-      const products = await getProductsByCategory(
-        pathSegments[0],
-        Object.keys(filters).length > 0 ? filters : undefined
-      );
-      return NextResponse.json(products);
-    }
-
+    // Обработка запроса списка продуктов
     if (pathSegments.length === 2) {
+      // Запрос продуктов подкатегории
       try {
-        const product = await getProductDetails(
-          pathSegments[0],
-          pathSegments[1]
-        );
-        return NextResponse.json(product);
-      } catch (error) {
-        const products = await getProductsBySubcategory(
+        const result = await getProductsBySubcategory(
           pathSegments[0],
           pathSegments[1],
-          Object.keys(filters).length > 0 ? filters : undefined
+          page,
+          filters
         );
-        return NextResponse.json(products);
+        return NextResponse.json(result);
+      } catch (error) {
+        console.error("Error fetching subcategory products:", error);
+        return NextResponse.json(
+          { error: "Failed to fetch products" },
+          { status: 500 }
+        );
       }
-    }
-
-    if (pathSegments.length === 3) {
-      const product = await getProductDetails(
-        pathSegments[0],
-        pathSegments[2],
-        pathSegments[1]
-      );
-      return NextResponse.json(product);
+    } else if (pathSegments.length === 1) {
+      // Запрос продуктов категории
+      try {
+        const result = await getProductsByCategory(
+          pathSegments[0],
+          page,
+          filters
+        );
+        return NextResponse.json(result);
+      } catch (error) {
+        console.error("Error fetching category products:", error);
+        return NextResponse.json(
+          { error: "Failed to fetch products" },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   } catch (error) {
-    console.error("Products fetch error:", error);
-    if (error instanceof Error && error.message.includes("not found")) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
+    console.error("Products API error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

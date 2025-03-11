@@ -35,42 +35,55 @@ export default function ProductPage() {
           url = `/api/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
         }
 
+        console.log("Fetching product from:", url); // Добавляем лог для отладки
+
         const response = await fetch(url);
+        const data = await response.json();
 
         if (!response.ok) {
-          throw new Error("Не удалось загрузить данные о товаре");
+          throw new Error(data.error || "Не удалось загрузить данные о товаре");
         }
 
-        const data = await response.json();
+        if (!data || !data.id) {
+          throw new Error("Получены некорректные данные о товаре");
+        }
+
         setProduct(data);
 
         // Дополнительный запрос для получения имен категорий
-        // На реальном проекте это может быть отдельный API-метод или стор
-        if (categorySlug) {
+        try {
           const catResponse = await fetch(`/api/categories`);
-          if (catResponse.ok) {
-            const categories = await catResponse.json();
-            const category = categories.find(
-              (c: any) => c.slug === categorySlug
-            );
+          const categories = await catResponse.json();
 
-            if (category) {
-              setCategoryName(category.name);
+          if (!catResponse.ok) {
+            console.error("Failed to fetch categories:", categories);
+            return;
+          }
 
-              if (subcategorySlug && category.children) {
-                const subcategory = category.children.find(
-                  (sc: any) => sc.slug === subcategorySlug
-                );
-                if (subcategory) {
-                  setSubcategoryName(subcategory.name);
-                }
+          const category = categories.find((c: any) => c.slug === categorySlug);
+          if (category) {
+            setCategoryName(category.name);
+
+            if (subcategorySlug && category.children) {
+              const subcategory = category.children.find(
+                (sc: any) => sc.slug === subcategorySlug
+              );
+              if (subcategory) {
+                setSubcategoryName(subcategory.name);
               }
             }
           }
+        } catch (err) {
+          console.error("Error fetching categories:", err);
+          // Не выбрасываем ошибку, так как это некритичная информация
         }
       } catch (err) {
         console.error("Error fetching product:", err);
-        setError(err instanceof Error ? err.message : "Произошла ошибка");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Произошла ошибка при загрузке товара"
+        );
       } finally {
         setIsLoading(false);
       }
