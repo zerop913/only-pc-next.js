@@ -63,7 +63,7 @@ export default function ProductCard({
               object-contain rounded-lg transition-opacity duration-300
               ${imageLoading ? "opacity-0" : "opacity-100"}
             `}
-            onLoadingComplete={() => setImageLoading(false)}
+            onLoad={() => setImageLoading(false)}
             priority
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

@@ -8,12 +8,12 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthField } from "@/components/auth/AuthField";
 import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function LoginPage() {
   const { login, error, isLoading } = useAuth();
-  const [captchaError, setCaptchaError] = useState<string | undefined>();
-  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
+  const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
 
   const {
     register,
@@ -32,32 +32,27 @@ export default function LoginPage() {
   const handleCaptchaChange = (token: string | null) => {
     if (token) {
       setValue("captchaToken", token);
-      setCaptchaError(undefined);
       setCaptchaVerified(true);
-      console.log("Капча верифицирована в компоненте логина");
     } else {
       setValue("captchaToken", "");
-      setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
       setCaptchaVerified(false);
     }
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
-      setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
+      captchaRef.current?.resetCaptcha();
       return;
     }
 
-    login(data);
-  };
+    const result = await login(data);
 
-  // Добавляем сообщение в консоль для отслеживания
-  useEffect(() => {
-    console.log(
-      "Состояние проверки капчи:",
-      captchaVerified ? "Верифицирована" : "Не верифицирована"
-    );
-  }, [captchaVerified]);
+    if (!result.success) {
+      captchaRef.current?.resetCaptcha();
+      setValue("captchaToken", "");
+      setCaptchaVerified(false);
+    }
+  };
 
   return (
     <AuthLayout
@@ -85,8 +80,12 @@ export default function LoginPage() {
         />
 
         <CaptchaField
+          ref={captchaRef}
           onChange={handleCaptchaChange}
-          error={captchaError || errors.captchaToken?.message?.toString()}
+          onReset={() => {
+            setValue("captchaToken", "");
+            setCaptchaVerified(false);
+          }}
         />
 
         {error && (

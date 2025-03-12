@@ -33,7 +33,7 @@ export default function ConfiguratorWelcome() {
       className="mt-6"
     >
       {/* Основная секция с инструкцией */}
-      <div className="flex items-center justify-center mb-6">
+      <div className="flex items-center justify-center mb-6 pt-6">
         <ArrowUpIcon className="w-5 h-5 text-blue-400 animate-bounce mr-2" />
         <span className="text-secondary-light text-sm">
           Выберите категорию для начала работы

@@ -62,8 +62,8 @@ export const characteristicsTypes = pgTable("characteristics_types", {
 // Определение характеристик продуктов
 export const productCharacteristics = pgTable("product_characteristics", {
   id: serial("id").primaryKey(),
-  productId: integer("product_id").notNull(),
-  characteristicTypeId: integer("characteristic_type_id").notNull(),
+  product_id: integer("product_id").notNull(),
+  characteristic_type_id: integer("characteristic_type_id").notNull(),
   value: text("value").notNull(),
 });
 
@@ -82,11 +82,11 @@ export const productCharacteristicsRelations = relations(
   productCharacteristics,
   ({ one }) => ({
     product: one(products, {
-      fields: [productCharacteristics.productId],
+      fields: [productCharacteristics.product_id],
       references: [products.id],
     }),
     characteristicType: one(characteristicsTypes, {
-      fields: [productCharacteristics.characteristicTypeId],
+      fields: [productCharacteristics.characteristic_type_id],
       references: [characteristicsTypes.id],
     }),
   })

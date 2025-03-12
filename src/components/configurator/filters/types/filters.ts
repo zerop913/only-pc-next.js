@@ -28,6 +28,14 @@ export interface SelectedFilters {
   priceRange: [number, number];
 }
 
+// Добавляем интерфейс ProductFilters
+export interface ProductFilters {
+  priceMin?: number;
+  priceMax?: number;
+  brands?: string[];
+  characteristics?: Record<string, string[]>;
+}
+
 // Обновляем интерфейс для функции onFilterChange
 export interface FiltersProps {
   onFilterChange: (

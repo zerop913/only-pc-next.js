@@ -8,12 +8,13 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthField } from "@/components/auth/AuthField";
 import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function RegisterPage() {
   const { register: registerUser, error, isLoading } = useAuth();
   const [captchaError, setCaptchaError] = useState<string | undefined>();
-  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
+  const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
 
   const {
     register,
@@ -95,8 +96,12 @@ export default function RegisterPage() {
         />
 
         <CaptchaField
+          ref={captchaRef}
           onChange={handleCaptchaChange}
-          error={captchaError || errors.captchaToken?.message?.toString()}
+          onReset={() => {
+            setValue("captchaToken", "");
+            setCaptchaVerified(false);
+          }}
         />
 
         {error && (

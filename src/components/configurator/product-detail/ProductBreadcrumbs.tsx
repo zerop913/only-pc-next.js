@@ -19,25 +19,34 @@ export default function ProductBreadcrumbs({
   productName,
   preservePage = true,
 }: ProductBreadcrumbsProps) {
-  const [pageParam, setPageParam] = useState<string>("");
+  const [queryParams, setQueryParams] = useState<string>("");
 
-  // Сохраняем параметр страницы из URL при монтировании
+  // Сохраняем все параметры из URL при монтировании
   useEffect(() => {
-    if (preservePage && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const page = urlParams.get("page");
-      if (page) {
-        setPageParam(`&page=${page}`);
-      }
+      const currentParams = new URLSearchParams();
+
+      // Копируем все параметры кроме category и subcategory
+      urlParams.forEach((value, key) => {
+        if (key !== "category" && key !== "subcategory") {
+          currentParams.append(key, value);
+        }
+      });
+
+      const paramsString = currentParams.toString();
+      setQueryParams(paramsString ? `&${paramsString}` : "");
     }
-  }, [preservePage]);
+  }, []);
 
   return (
     <nav aria-label="Навигация по сайту">
       <ol className="flex flex-wrap items-center text-sm text-secondary-light mb-5 sm:mb-7 overflow-x-auto whitespace-nowrap pb-2 backdrop-blur-sm bg-gradient-from/5 p-2 rounded-lg">
         <li className="flex items-center">
           <Link
-            href="/configurator"
+            href={`/configurator${
+              queryParams ? `?${queryParams.slice(1)}` : ""
+            }`}
             className="hover:text-white transition-colors duration-200 hover:scale-105 transform px-1"
           >
             Конфигуратор
@@ -47,7 +56,7 @@ export default function ProductBreadcrumbs({
 
         <li className="flex items-center">
           <Link
-            href={`/configurator?category=${categorySlug}${pageParam}`}
+            href={`/configurator?category=${categorySlug}${queryParams}`}
             className="hover:text-white transition-colors duration-200 hover:scale-105 transform px-1"
           >
             {categoryName}
@@ -60,7 +69,7 @@ export default function ProductBreadcrumbs({
         {subcategoryName && subcategorySlug && (
           <li className="flex items-center">
             <Link
-              href={`/configurator?category=${categorySlug}&subcategory=${subcategorySlug}${pageParam}`}
+              href={`/configurator?category=${categorySlug}&subcategory=${subcategorySlug}${queryParams}`}
               className="hover:text-white transition-colors duration-200 hover:scale-105 transform px-1"
             >
               {subcategoryName}

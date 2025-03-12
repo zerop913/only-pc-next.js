@@ -18,6 +18,12 @@ export interface User {
   roleId: number;
 }
 
+// Определяем типы для результатов операций
+interface AuthResult {
+  success: boolean;
+  error?: string;
+}
+
 // Интерфейс контекста авторизации
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -25,8 +31,8 @@ interface AuthContextType {
   isInitialized: boolean;
   user: User | null;
   error: string | null;
-  login: (data: z.infer<typeof LoginSchema>) => Promise<void>;
-  register: (data: z.infer<typeof RegisterSchema>) => Promise<void>;
+  login: (data: z.infer<typeof LoginSchema>) => Promise<AuthResult>;
+  register: (data: z.infer<typeof RegisterSchema>) => Promise<AuthResult>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -106,7 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [checkAuth]);
 
-  const login = async (data: z.infer<typeof LoginSchema>) => {
+  const login = async (
+    data: z.infer<typeof LoginSchema>
+  ): Promise<AuthResult> => {
     setIsLoading(true);
     setError(null);
 
@@ -124,19 +132,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(result.error || "Ошибка входа");
       }
 
-      // Немедленно проверяем авторизацию после успешного входа
       await checkAuth();
       router.push("/configurator");
+      return { success: true };
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Произошла неизвестная ошибка"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Произошла неизвестная ошибка";
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (data: z.infer<typeof RegisterSchema>) => {
+  const register = async (
+    data: z.infer<typeof RegisterSchema>
+  ): Promise<AuthResult> => {
     setIsLoading(true);
     setError(null);
 
@@ -155,10 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       router.push("/login");
+      return { success: true };
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Произошла неизвестная ошибка"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Произошла неизвестная ошибка";
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }

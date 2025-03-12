@@ -21,7 +21,7 @@ import {
   type ProductCharacteristic,
   type CategoryResponse,
 } from "@/types/product";
-import { ProductFilters } from "./filterService";
+import { ProductFilters } from "@/components/configurator/filters/types/filters";
 
 const CACHE_TTL = 3600; // 1 час
 const FILTERED_CACHE_TTL = 300; // 5 минут для отфильтрованных результатов
@@ -128,73 +128,27 @@ export async function getProductsBySubcategory(
   page: number = 1,
   filters?: ProductFilters
 ): Promise<PaginatedProducts> {
-  // Если нет фильтров, попытаемся использовать кеш
-  const cacheKey = `products_subcategory_${categorySlug}_${subcategorySlug}`;
-  const cachedData = !filters ? await redis.get(cacheKey) : null;
+  try {
+    // Если нет фильтров, попытаемся использовать кеш
+    const cacheKey = `products_subcategory_${categorySlug}_${subcategorySlug}`;
+    const cachedData = !filters ? await redis.get(cacheKey) : null;
 
-  if (cachedData) {
-    return JSON.parse(cachedData);
-  }
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
 
-  // Находим категорию и подкатегорию
-  const category = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.slug, categorySlug))
-    .limit(1);
+    // Находим категорию
+    const category = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.slug, categorySlug))
+      .limit(1);
 
-  if (!category.length) {
-    throw new Error("Category not found");
-  }
+    if (!category.length) {
+      throw new Error("Category not found");
+    }
 
-  const subcategory = await db
-    .select()
-    .from(categories)
-    .where(
-      and(
-        eq(categories.slug, subcategorySlug),
-        eq(categories.parentId, category[0].id)
-      )
-    )
-    .limit(1);
-
-  if (!subcategory.length) {
-    throw new Error("Subcategory not found");
-  }
-
-  // Заменяем старый вызов на новый
-  return getFilteredProducts(subcategory[0].id, page, filters);
-}
-
-export async function getProductDetails(
-  categorySlug: string,
-  productSlug: string,
-  subcategorySlug?: string
-): Promise<Product> {
-  const cacheKey = `product_details_${categorySlug}_${
-    subcategorySlug || ""
-  }_${productSlug}`;
-  const cachedData = await redis.get(cacheKey);
-
-  if (cachedData) {
-    return JSON.parse(cachedData);
-  }
-
-  // Находим категорию
-  const category = await db
-    .select()
-    .from(categories)
-    .where(eq(categories.slug, categorySlug))
-    .limit(1);
-
-  if (!category.length) {
-    throw new Error("Category not found");
-  }
-
-  let targetCategoryId = category[0].id;
-
-  // Если указана подкатегория, находим ее
-  if (subcategorySlug) {
+    // Находим подкатегорию
     const subcategory = await db
       .select()
       .from(categories)
@@ -206,78 +160,88 @@ export async function getProductDetails(
       )
       .limit(1);
 
-    if (!subcategory.length) {
-      throw new Error("Subcategory not found");
+    // Используем ID основной категории, если подкатегория не найдена
+    const targetCategoryId = subcategory.length
+      ? subcategory[0].id
+      : category[0].id;
+
+    return getFilteredProducts(targetCategoryId, page, filters);
+  } catch (error) {
+    console.error("Error in getProductsBySubcategory:", error);
+    throw error;
+  }
+}
+
+export async function getProductDetails(
+  categorySlug: string,
+  productSlug: string,
+  subcategorySlug?: string
+): Promise<Product> {
+  try {
+    // Очищаем слаг от -p- и числа
+    const cleanProductSlug = productSlug.split("-p-")[0];
+
+    console.log("Service Debug: Product request", {
+      originalSlug: productSlug,
+      cleanSlug: cleanProductSlug,
+      categorySlug,
+      subcategorySlug,
+    });
+
+    // Получаем продукт без проверки категории
+    const productQuery = await db
+      .select()
+      .from(products)
+      .where(eq(products.slug, cleanProductSlug))
+      .limit(1);
+
+    if (!productQuery.length) {
+      throw new Error(`Product not found: ${cleanProductSlug}`);
     }
 
-    targetCategoryId = subcategory[0].id;
-  }
+    const rawProduct = productQuery[0];
 
-  // Получаем детали продукта
-  const product = await db
-    .select({
-      id: products.id,
-      slug: products.slug,
-      title: products.title,
-      price: products.price,
-      brand: products.brand,
-      image: products.image,
-      description: products.description,
-      categoryId: products.categoryId,
-    })
-    .from(products)
-    .where(
-      and(
-        eq(products.slug, productSlug),
-        eq(products.categoryId, targetCategoryId)
+    // Формируем результат
+    const result: Product = {
+      id: Number(rawProduct.id),
+      slug: String(rawProduct.slug),
+      title: String(rawProduct.title),
+      price: Number(rawProduct.price),
+      brand: String(rawProduct.brand || ""),
+      image: rawProduct.image || null,
+      description: rawProduct.description || null,
+      categoryId: Number(rawProduct.categoryId),
+      characteristics: [],
+    };
+
+    // Загружаем характеристики
+    const characteristics = await db
+      .select({
+        type: characteristicsTypes.name,
+        value: productCharacteristics.value,
+      })
+      .from(productCharacteristics)
+      .leftJoin(
+        characteristicsTypes,
+        eq(
+          productCharacteristics.characteristic_type_id,
+          characteristicsTypes.id
+        )
       )
-    )
-    .limit(1);
+      .where(eq(productCharacteristics.product_id, result.id));
 
-  if (!product.length) {
-    throw new Error("Product not found");
+    result.characteristics = characteristics
+      .filter((char) => char.type && char.value)
+      .map(({ type, value }) => ({
+        type: String(type),
+        value: String(value),
+      }));
+
+    return result;
+  } catch (error) {
+    console.error("Service Error in getProductDetails:", error);
+    throw error;
   }
-
-  // Получаем характеристики продукта с правильной типизацией
-  const characteristics = await db
-    .select({
-      type: characteristicsTypes.name,
-      value: productCharacteristics.value,
-    })
-    .from(productCharacteristics)
-    .leftJoin(
-      characteristicsTypes,
-      eq(productCharacteristics.characteristicTypeId, characteristicsTypes.id)
-    )
-    .where(
-      and(
-        eq(productCharacteristics.productId, product[0].id),
-        isNotNull(characteristicsTypes.name)
-      )
-    );
-
-  // Фильтруем и преобразуем характеристики с правильной типизацией
-  const filteredCharacteristics: ProductCharacteristic[] = characteristics
-    .filter(
-      (char): char is { type: string; value: string } =>
-        typeof char.type === "string" && char.type !== null
-    )
-    .map(({ type, value }) => ({
-      type,
-      value,
-    }));
-
-  const productWithCharacteristics: Product = {
-    ...mapProduct(product[0]),
-    characteristics: filteredCharacteristics,
-  };
-
-  await redis.setex(
-    cacheKey,
-    CACHE_TTL,
-    JSON.stringify(productWithCharacteristics)
-  );
-  return productWithCharacteristics;
 }
 
 // Удаляем старую версию getFilteredProducts и оставляем только эту
@@ -286,10 +250,26 @@ export async function getFilteredProducts(
   page: number = 1,
   filters?: ProductFilters
 ): Promise<PaginatedProducts> {
-  const validPage = Math.max(1, page);
-  const cacheKey = createFilterCacheKey(categoryId, filters, validPage);
-
   try {
+    const validPage = Math.max(1, page);
+    const cacheKey = createFilterCacheKey(categoryId, filters, validPage);
+
+    // Добавляем проверку на существование категории
+    const categoryExists = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.id, categoryId))
+      .limit(1);
+
+    if (!categoryExists.length) {
+      return {
+        products: [],
+        totalItems: 0,
+        totalPages: 1,
+        currentPage: 1,
+      };
+    }
+
     // Пытаемся получить данные из кеша
     const cachedData = await redis.get(cacheKey);
     if (cachedData) {
@@ -354,11 +334,14 @@ export async function getFilteredProducts(
             if (charType.length) {
               const charTypeId = charType[0].id;
               const matchingProductIds = await db
-                .select({ productId: productCharacteristics.productId })
+                .select({ product_id: productCharacteristics.product_id })
                 .from(productCharacteristics)
                 .where(
                   and(
-                    eq(productCharacteristics.characteristicTypeId, charTypeId),
+                    eq(
+                      productCharacteristics.characteristic_type_id,
+                      charTypeId
+                    ), // Исправляем имя поля
                     inArray(productCharacteristics.value, values)
                   )
                 );
@@ -367,7 +350,7 @@ export async function getFilteredProducts(
                 conditions.push(
                   inArray(
                     products.id,
-                    matchingProductIds.map((p) => p.productId)
+                    matchingProductIds.map((p) => p.product_id)
                   )
                 );
               }
@@ -403,7 +386,7 @@ export async function getFilteredProducts(
       productIds.length > 0
         ? await db
             .select({
-              productId: productCharacteristics.productId,
+              product_id: productCharacteristics.product_id,
               type: characteristicsTypes.name,
               value: productCharacteristics.value,
             })
@@ -411,11 +394,11 @@ export async function getFilteredProducts(
             .leftJoin(
               characteristicsTypes,
               eq(
-                productCharacteristics.characteristicTypeId,
+                productCharacteristics.characteristic_type_id,
                 characteristicsTypes.id
               )
             )
-            .where(inArray(productCharacteristics.productId, productIds))
+            .where(inArray(productCharacteristics.product_id, productIds))
         : [];
 
     // Формируем результат
@@ -423,7 +406,7 @@ export async function getFilteredProducts(
       products: productsResult.map((product) => ({
         ...mapProduct(product),
         characteristics: characteristics
-          .filter((c) => c.productId === product.id)
+          .filter((c) => c.product_id === product.id)
           .map(({ type, value }) => ({ type, value })),
       })),
       totalItems,

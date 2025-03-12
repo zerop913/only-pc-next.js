@@ -29,35 +29,63 @@ export default function ProductPage() {
       setError(null);
 
       try {
-        let url = `/api/products/${categorySlug}/${productSlug}`;
-
-        if (subcategorySlug) {
-          url = `/api/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
+        if (!categorySlug || !productSlug) {
+          throw new Error("Отсутствуют необходимые параметры");
         }
 
-        console.log("Fetching product from:", url); // Добавляем лог для отладки
+        // Добавляем -p-1 к слагу продукта, если его нет
+        const fullProductSlug = productSlug.includes("-p-")
+          ? productSlug
+          : `${productSlug}-p-1`;
+
+        const url = subcategorySlug
+          ? `/api/products/${categorySlug}/${subcategorySlug}/${fullProductSlug}`
+          : `/api/products/${categorySlug}/${fullProductSlug}`;
+
+        console.log("Debug: Fetching product from:", url);
 
         const response = await fetch(url);
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Не удалось загрузить данные о товаре");
+          throw new Error(data.error || "Не удалось загрузить товар");
         }
 
-        if (!data || !data.id) {
-          throw new Error("Получены некорректные данные о товаре");
+        // Строгая проверка данных
+        if (!data || typeof data !== "object") {
+          throw new Error("Получены некорректные данные");
         }
 
-        setProduct(data);
+        // Проверяем и конвертируем поля
+        const product: Product = {
+          id: Number(data.id),
+          title: String(data.title || ""),
+          slug: String(data.slug || ""),
+          price: Number(data.price),
+          brand: String(data.brand || ""),
+          image: data.image || null,
+          description: data.description || null,
+          categoryId: Number(data.categoryId),
+          characteristics: Array.isArray(data.characteristics)
+            ? data.characteristics
+            : [],
+        };
 
-        // Дополнительный запрос для получения имен категорий
+        // Проверяем обязательные поля
+        if (!product.id || !product.title || !product.slug || !product.price) {
+          console.error("Invalid product data:", product);
+          throw new Error("Некорректные данные товара");
+        }
+
+        setProduct(product);
+
+        // Загрузка категорий
         try {
           const catResponse = await fetch(`/api/categories`);
           const categories = await catResponse.json();
 
           if (!catResponse.ok) {
-            console.error("Failed to fetch categories:", categories);
-            return;
+            throw new Error("Не удалось загрузить категории");
           }
 
           const category = categories.find((c: any) => c.slug === categorySlug);
@@ -75,15 +103,15 @@ export default function ProductPage() {
           }
         } catch (err) {
           console.error("Error fetching categories:", err);
-          // Не выбрасываем ошибку, так как это некритичная информация
         }
       } catch (err) {
-        console.error("Error fetching product:", err);
+        console.error("Client: Error fetching product:", err);
         setError(
           err instanceof Error
             ? err.message
             : "Произошла ошибка при загрузке товара"
         );
+        setProduct(null);
       } finally {
         setIsLoading(false);
       }

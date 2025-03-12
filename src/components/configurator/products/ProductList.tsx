@@ -4,6 +4,7 @@ import ProductCard from "./ProductCard";
 import Pagination from "@/components/common/ui/Pagination";
 import { PaginatedProducts } from "@/services/productService";
 import { usePagination } from "@/hooks/usePagination";
+import ProductsContext from "./ProductsContext";
 
 interface ProductListProps {
   data: PaginatedProducts;
@@ -86,17 +87,16 @@ export default function ProductList({
   }
 
   return (
-    <div className="product-list">
-      <div className="text-secondary-light text-sm mb-4">
-        Найдено товаров: {totalItems}
-        {totalPages > 1 && (
-          <span className="text-secondary-light ml-2">
-            (Страница {currentPage} из {totalPages})
-          </span>
-        )}
+    <div className="product-list space-y-6">
+      <div className="sticky top-4 z-10">
+        <ProductsContext
+          totalItems={totalItems}
+          currentPage={currentPage}
+          totalPages={totalPages}
+        />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 mt-0">
         {products.map((product) => (
           <ProductCard
             key={product.id}

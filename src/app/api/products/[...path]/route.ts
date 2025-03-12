@@ -10,6 +10,8 @@ import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { parseFilterParams } from "@/lib/utils/filterUtils";
+import { ProductFilters } from "@/components/configurator/filters/types/filters";
+import { Product } from "@/types/product";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,125 +24,33 @@ export async function GET(request: NextRequest) {
           segment !== "" && segment !== "api" && segment !== "products"
       );
 
-    // Получаем и валидируем номер страницы
-    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-    const filters = parseFilterParams(url.searchParams);
+    console.log("API Debug: pathSegments", pathSegments);
+    console.log("API Debug: url", url.toString());
 
-    // Проверяем, запрашиваются ли детали продукта
+    // Определяем тип запроса по последнему сегменту пути
     const lastSegment = pathSegments[pathSegments.length - 1];
-    const isProductDetails = lastSegment?.includes("-p-");
+    const isProductRequest = lastSegment && lastSegment.includes("-p-");
+    const isFilterRequest = url.searchParams.get("filters") === "true";
 
-    if (isProductDetails) {
-      try {
-        const categorySlug = pathSegments[0];
-        const productSlug = lastSegment;
-        const subcategorySlug =
-          pathSegments.length === 3 ? pathSegments[1] : undefined;
-
-        const product = await getProductDetails(
-          categorySlug,
-          productSlug,
-          subcategorySlug
-        );
-        return NextResponse.json(product);
-      } catch (error) {
-        console.error("Product details error:", error);
-        return NextResponse.json(
-          { error: "Product not found" },
-          { status: 404 }
+    try {
+      if (isFilterRequest) {
+        return await handleFilterRequest(pathSegments);
+      } else if (isProductRequest) {
+        return await handleProductRequest(pathSegments);
+      } else {
+        return await handleProductListRequest(
+          pathSegments,
+          Math.max(1, Number(url.searchParams.get("page")) || 1),
+          parseFilterParams(url.searchParams)
         );
       }
+    } catch (error: any) {
+      console.error("Request handling error:", error);
+      return NextResponse.json(
+        { error: error.message || "Internal server error" },
+        { status: error.status || 500 }
+      );
     }
-
-    // Обработка запроса фильтров
-    if (url.searchParams.get("filters") === "true") {
-      if (pathSegments.length === 0) {
-        return NextResponse.json(
-          { error: "Category is required" },
-          { status: 400 }
-        );
-      }
-
-      // Сначала находим основную категорию
-      const category = await db
-        .select()
-        .from(categories)
-        .where(eq(categories.slug, pathSegments[0]))
-        .limit(1);
-
-      if (!category.length) {
-        return NextResponse.json(
-          { error: "Category not found" },
-          { status: 404 }
-        );
-      }
-
-      // Теперь проверяем, запрашиваются ли фильтры для подкатегории
-      if (pathSegments.length === 2) {
-        const subcategory = await db
-          .select()
-          .from(categories)
-          .where(
-            and(
-              eq(categories.slug, pathSegments[1]),
-              eq(categories.parentId, category[0].id)
-            )
-          )
-          .limit(1);
-
-        if (!subcategory.length) {
-          return NextResponse.json(
-            { error: "Subcategory not found" },
-            { status: 404 }
-          );
-        }
-
-        const filterOptions = await getCategoryFilters(subcategory[0].id);
-        return NextResponse.json(filterOptions);
-      }
-
-      // Если это основная категория, возвращаем её фильтры
-      const filterOptions = await getCategoryFilters(category[0].id);
-      return NextResponse.json(filterOptions);
-    }
-
-    // Обработка запроса списка продуктов
-    if (pathSegments.length === 2) {
-      // Запрос продуктов подкатегории
-      try {
-        const result = await getProductsBySubcategory(
-          pathSegments[0],
-          pathSegments[1],
-          page,
-          filters
-        );
-        return NextResponse.json(result);
-      } catch (error) {
-        console.error("Error fetching subcategory products:", error);
-        return NextResponse.json(
-          { error: "Failed to fetch products" },
-          { status: 500 }
-        );
-      }
-    } else if (pathSegments.length === 1) {
-      // Запрос продуктов категории
-      try {
-        const result = await getProductsByCategory(
-          pathSegments[0],
-          page,
-          filters
-        );
-        return NextResponse.json(result);
-      } catch (error) {
-        console.error("Error fetching category products:", error);
-        return NextResponse.json(
-          { error: "Failed to fetch products" },
-          { status: 500 }
-        );
-      }
-    }
-
-    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   } catch (error) {
     console.error("Products API error:", error);
     return NextResponse.json(
@@ -148,4 +58,120 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Обработчики запросов
+async function handleFilterRequest(pathSegments: string[]) {
+  const categorySlug = pathSegments[0];
+  const subcategorySlug = pathSegments[1];
+
+  const category = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.slug, categorySlug))
+    .limit(1);
+
+  if (!category.length) {
+    throw { message: "Category not found", status: 404 };
+  }
+
+  if (subcategorySlug) {
+    const subcategory = await db
+      .select()
+      .from(categories)
+      .where(
+        and(
+          eq(categories.slug, subcategorySlug),
+          eq(categories.parentId, category[0].id)
+        )
+      )
+      .limit(1);
+
+    if (!subcategory.length) {
+      throw { message: "Subcategory not found", status: 404 };
+    }
+
+    const filterOptions = await getCategoryFilters(subcategory[0].id);
+    return NextResponse.json(filterOptions);
+  }
+
+  const filterOptions = await getCategoryFilters(category[0].id);
+  return NextResponse.json(filterOptions);
+}
+
+async function handleProductRequest(pathSegments: string[]) {
+  try {
+    const productSlug = pathSegments[pathSegments.length - 1];
+    const categorySlug = pathSegments[0];
+    const subcategorySlug =
+      pathSegments.length === 3 ? pathSegments[1] : undefined;
+
+    console.log("API: Processing request:", {
+      productSlug,
+      categorySlug,
+      subcategorySlug,
+      path: pathSegments,
+    });
+
+    const product = await getProductDetails(
+      categorySlug,
+      productSlug,
+      subcategorySlug
+    );
+
+    if (!product || typeof product !== "object") {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Проверяем обязательные поля
+    const requiredFields = ["id", "title", "slug", "price"] as const;
+    const missingFields = requiredFields.filter((field) => {
+      const value = product[field];
+      return (
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && !value.trim()) ||
+        (typeof value === "number" && isNaN(value))
+      );
+    });
+
+    if (missingFields.length > 0) {
+      console.error("API: Invalid product data:", { product, missingFields });
+      return NextResponse.json(
+        { error: `Missing or invalid fields: ${missingFields.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(product);
+  } catch (error: any) {
+    console.error("API: Product request error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch product" },
+      { status: error.status || 500 }
+    );
+  }
+}
+
+async function handleProductListRequest(
+  pathSegments: string[],
+  page: number,
+  filters?: ProductFilters
+) {
+  if (pathSegments.length === 2) {
+    const result = await getProductsBySubcategory(
+      pathSegments[0],
+      pathSegments[1],
+      page,
+      filters
+    );
+    return NextResponse.json(result);
+  }
+
+  if (pathSegments.length === 1) {
+    const result = await getProductsByCategory(pathSegments[0], page, filters);
+    return NextResponse.json(result);
+  }
+
+  throw { message: "Invalid path", status: 400 };
 }

@@ -1,8 +1,14 @@
-import React, { useEffect, useRef } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 
 interface CaptchaFieldProps {
   onChange: (token: string | null) => void;
-  error?: string;
+  onReset?: () => void;
 }
 
 interface ReCaptchaWindow extends Window {
@@ -24,25 +30,61 @@ interface ReCaptchaWindow extends Window {
   };
 }
 
-export const CaptchaField: React.FC<CaptchaFieldProps> = ({
-  onChange,
-  error,
-}) => {
+export const CaptchaField = forwardRef<
+  { resetCaptcha: () => void },
+  CaptchaFieldProps
+>(({ onChange, onReset }, ref) => {
   const captchaRef = useRef<HTMLDivElement>(null);
   const captchaWidgetId = useRef<number | null>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  const resetCaptcha = useCallback(() => {
+    const reCaptchaWindow = window as ReCaptchaWindow;
+    const grecaptcha = reCaptchaWindow?.grecaptcha;
+
+    if (captchaWidgetId.current !== null && grecaptcha?.reset) {
+      grecaptcha.reset(captchaWidgetId.current);
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Увеличиваем задержку перед повторным выполнением капчи
+      timeoutRef.current = setTimeout(() => {
+        if (captchaWidgetId.current !== null && grecaptcha?.execute) {
+          grecaptcha.execute(captchaWidgetId.current).catch(console.error);
+        }
+      }, 1500); // Увеличенная задержка
+    }
+    onChange(null);
+    onReset?.();
+  }, [onChange, onReset]);
+
+  // Экспортируем метод resetCaptcha через ref
+  useImperativeHandle(ref, () => ({
+    resetCaptcha,
+  }));
+
+  // Очистка таймаута при размонтировании
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    // Проверяем, загружен ли уже скрипт reCAPTCHA
+    if (typeof window === "undefined") return;
+
     const reCaptchaWindow = window as ReCaptchaWindow;
 
-    if (typeof window !== "undefined" && !reCaptchaWindow.grecaptcha) {
-      // Функция, которая будет вызвана после загрузки скрипта reCAPTCHA
+    if (!reCaptchaWindow.grecaptcha) {
       reCaptchaWindow.onRecaptchaLoad = () => {
         initializeCaptcha();
       };
 
-      // Динамически добавляем скрипт reCAPTCHA
       const script = document.createElement("script");
       script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit`;
       script.async = true;
@@ -61,18 +103,11 @@ export const CaptchaField: React.FC<CaptchaFieldProps> = ({
         }
       };
     } else if (
-      typeof window !== "undefined" &&
-      reCaptchaWindow.grecaptcha &&
+      reCaptchaWindow.grecaptcha?.render &&
       typeof reCaptchaWindow.grecaptcha.render === "function"
     ) {
-      // Если скрипт уже загружен, инициализируем капчу напрямую
       initializeCaptcha();
-    } else if (
-      typeof window !== "undefined" &&
-      reCaptchaWindow.grecaptcha &&
-      reCaptchaWindow.grecaptcha.ready
-    ) {
-      // Для версии reCAPTCHA v3
+    } else if (reCaptchaWindow.grecaptcha?.ready) {
       reCaptchaWindow.grecaptcha.ready(() => {
         initializeCaptcha();
       });
@@ -82,70 +117,54 @@ export const CaptchaField: React.FC<CaptchaFieldProps> = ({
   // Функция для инициализации reCAPTCHA
   const initializeCaptcha = () => {
     const reCaptchaWindow = window as ReCaptchaWindow;
+    const grecaptcha = reCaptchaWindow?.grecaptcha;
 
-    if (
-      captchaRef.current &&
-      reCaptchaWindow.grecaptcha &&
-      typeof reCaptchaWindow.grecaptcha.render === "function"
-    ) {
-      // Если виджет уже создан, сбросим его
-      if (
-        captchaWidgetId.current !== null &&
-        typeof reCaptchaWindow.grecaptcha.reset === "function"
-      ) {
-        reCaptchaWindow.grecaptcha.reset(captchaWidgetId.current);
+    if (!captchaRef.current || !grecaptcha?.render) {
+      return;
+    }
+
+    try {
+      if (captchaWidgetId.current !== null && grecaptcha.reset) {
+        grecaptcha.reset(captchaWidgetId.current);
       } else {
-        // Создаем новый виджет Invisible reCAPTCHA
-        try {
-          captchaWidgetId.current = reCaptchaWindow.grecaptcha.render(
-            captchaRef.current,
-            {
-              sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "",
-              callback: (token: string) => {
-                console.log("Капча успешно пройдена!");
-                onChange(token);
-              },
-              "expired-callback": () => onChange(null),
-              size: "invisible",
-              badge: "bottomleft", // Изменение расположения бейджа (или можно будет скрыть через CSS)
-            }
-          );
+        captchaWidgetId.current = grecaptcha.render(captchaRef.current, {
+          sitekey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "",
+          callback: (token: string) => {
+            console.log("Капча успешно пройдена!");
+            onChange(token);
+          },
+          "expired-callback": () => onChange(null),
+          size: "invisible",
+          badge: "bottomleft",
+        });
 
-          // Автоматически выполняем капчу при загрузке страницы
-          setTimeout(() => {
-            if (
-              captchaWidgetId.current !== null &&
-              reCaptchaWindow.grecaptcha &&
-              reCaptchaWindow.grecaptcha.execute
-            ) {
-              reCaptchaWindow.grecaptcha.execute(captchaWidgetId.current);
-            }
-          }, 1000);
-        } catch (error) {
-          console.error("Ошибка при рендеринге reCAPTCHA:", error);
-        }
+        setTimeout(() => {
+          if (captchaWidgetId.current !== null && grecaptcha?.execute) {
+            grecaptcha.execute(captchaWidgetId.current).catch(console.error);
+          }
+        }, 1000);
       }
+    } catch (error) {
+      console.error("Ошибка при рендеринге reCAPTCHA:", error);
     }
   };
 
   return (
     <div>
-      {/* Скрытый контейнер для капчи */}
       <div
         ref={captchaRef}
         className="invisible"
         style={{ width: 0, height: 0 }}
       ></div>
 
-      {/* Скрываем бейдж Google с помощью CSS */}
       <style jsx global>{`
         .grecaptcha-badge {
           visibility: hidden !important;
           opacity: 0 !important;
         }
       `}</style>
-
-      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
-};
+});
+
+CaptchaField.displayName = "CaptchaField";
