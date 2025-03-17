@@ -6,6 +6,8 @@ import ProductGallery from "./ProductGallery";
 import ProductInfo from "./ProductInfo";
 import ProductCharacteristics from "./ProductCharacteristics";
 import ProductActions from "./ProductActions";
+import { useFavorites } from "@/contexts/FavoritesContext";
+import Notification from "@/components/common/Notification/Notification";
 
 interface ProductDetailProps {
   product: Product;
@@ -25,52 +27,59 @@ export default function ProductDetail({
   preservePage = true,
 }: ProductDetailProps) {
   const router = useRouter();
+  const { addToFavorites: addToFav, isFavorite } = useFavorites();
+  const [showFavNotification, setShowFavNotification] = useState(false);
 
-  const handleAddToConfiguration = (productId: number) => {
-    // Здесь будет логика добавления товара в конфигурацию
-    console.log(`Adding product ${productId} to configuration`);
-    // Можно добавить вызов API или обновление состояния
-  };
-
-  const handleAddToFavorites = (productId: number) => {
-    // Здесь будет логика добавления товара в избранное
-    console.log(`Adding product ${productId} to favorites`);
-    // Можно добавить вызов API или обновление состояния
+  const handleAddToFavorites = async () => {
+    await addToFav(product.id);
+    setShowFavNotification(true);
+    setTimeout(() => setShowFavNotification(false), 2000);
   };
 
   return (
-    <div className="bg-primary rounded-xl p-4 sm:p-6 lg:p-8 shadow-xl border border-primary-border backdrop-blur-sm bg-opacity-80 transition-all duration-300">
-      <ProductBreadcrumbs
-        categoryName={categoryName}
-        categorySlug={categorySlug}
-        subcategoryName={subcategoryName}
-        subcategorySlug={subcategorySlug}
-        productName={product.title}
-        preservePage={preservePage}
-      />
+    <>
+      <div className="bg-primary rounded-xl p-4 sm:p-6 lg:p-8 shadow-xl border border-primary-border backdrop-blur-sm bg-opacity-80 transition-all duration-300 overflow-x-hidden">
+        <ProductBreadcrumbs
+          categoryName={categoryName}
+          categorySlug={categorySlug}
+          subcategoryName={subcategoryName}
+          subcategorySlug={subcategorySlug}
+          productName={product.title}
+          preservePage={preservePage}
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-        <div className="order-1">
-          <ProductGallery image={product.image} title={product.title} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="order-1">
+            <ProductGallery image={product.image} title={product.title} />
+          </div>
+
+          <div className="order-2">
+            <ProductInfo
+              title={product.title}
+              description={product.description}
+              price={product.price}
+              brand={product.brand}
+              isFavorite={isFavorite(product.id)}
+              onAddToFavorites={handleAddToFavorites}
+            />
+
+            <ProductActions product={product} />
+          </div>
         </div>
 
-        <div className="order-2">
-          <ProductInfo
-            title={product.title}
-            description={product.description}
-            price={product.price}
-            brand={product.brand}
-            onAddToFavorites={() => handleAddToFavorites(product.id)}
-          />
-
-          <ProductActions
-            productId={product.id}
-            onAddToConfiguration={handleAddToConfiguration}
-          />
-        </div>
+        <ProductCharacteristics characteristics={product.characteristics} />
       </div>
 
-      <ProductCharacteristics characteristics={product.characteristics} />
-    </div>
+      <Notification
+        type="success"
+        message={
+          isFavorite(product.id)
+            ? "Добавлено в избранное"
+            : "Удалено из избранного"
+        }
+        isVisible={showFavNotification}
+        onClose={() => setShowFavNotification(false)}
+      />
+    </>
   );
 }

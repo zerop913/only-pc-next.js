@@ -182,7 +182,7 @@ const Categories = () => {
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="bg-primary rounded-xl p-4 sm:p-6 shadow-lg border border-primary-border">
-        <ConfiguratorHeader totalPrice={productState.totalPrice} />
+        <ConfiguratorHeader />
 
         {isMobile ? (
           <MobileView

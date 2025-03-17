@@ -43,9 +43,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Время между проверками токена (в мс) - 5 минут
 const TOKEN_CHECK_INTERVAL = 5 * 60 * 1000;
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Устанавливаем true по умолчанию

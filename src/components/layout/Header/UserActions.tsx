@@ -82,6 +82,10 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
     setShowLogoutConfirm(false);
   };
 
+  const handleFavoritesClick = () => {
+    router.push("/favorites");
+  };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (isAuthenticated && user) {
@@ -112,7 +116,12 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
   if (!isMobile && isAuthenticated) {
     return (
       <div className="relative flex space-x-6">
-        <ActionButton icon={HeartIcon} label="Избранное" isTablet={isTablet} />
+        <ActionButton
+          icon={HeartIcon}
+          label="Избранное"
+          isTablet={isTablet}
+          onClick={handleFavoritesClick}
+        />
         <ActionButton
           icon={ShoppingCartIcon}
           label="Корзина"
@@ -166,6 +175,7 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
         label="Избранное"
         isMobile={isMobile}
         isTablet={isTablet}
+        onClick={handleFavoritesClick}
       />
       <ActionButton
         icon={ShoppingCartIcon}

@@ -14,6 +14,7 @@ import {
   inArray,
   or,
   sql,
+  asc,
 } from "drizzle-orm";
 import { redis } from "@/lib/redis";
 import {
@@ -72,7 +73,8 @@ const mapProduct = (product: any): Product => ({
 export async function getProductsByCategory(
   categorySlug: string,
   page: number = 1,
-  filters?: ProductFilters
+  filters?: ProductFilters,
+  sortOrder: "asc" | "desc" = "asc"
 ): Promise<PaginatedProducts | CategoryResponse> {
   // Если нет фильтров, попытаемся использовать кеш
   const cacheKey = `products_category_${categorySlug}`;
@@ -119,14 +121,15 @@ export async function getProductsByCategory(
   }
 
   // Заменяем старый вызов на новый
-  return getFilteredProducts(category[0].id, page, filters);
+  return getFilteredProducts(category[0].id, page, filters, sortOrder);
 }
 
 export async function getProductsBySubcategory(
   categorySlug: string,
   subcategorySlug: string,
   page: number = 1,
-  filters?: ProductFilters
+  filters?: ProductFilters,
+  sortOrder: "asc" | "desc" = "asc"
 ): Promise<PaginatedProducts> {
   try {
     // Если нет фильтров, попытаемся использовать кеш
@@ -165,7 +168,7 @@ export async function getProductsBySubcategory(
       ? subcategory[0].id
       : category[0].id;
 
-    return getFilteredProducts(targetCategoryId, page, filters);
+    return getFilteredProducts(targetCategoryId, page, filters, sortOrder);
   } catch (error) {
     console.error("Error in getProductsBySubcategory:", error);
     throw error;
@@ -248,11 +251,15 @@ export async function getProductDetails(
 export async function getFilteredProducts(
   categoryId: number,
   page: number = 1,
-  filters?: ProductFilters
+  filters?: ProductFilters,
+  sortOrder: "asc" | "desc" = "asc"
 ): Promise<PaginatedProducts> {
   try {
     const validPage = Math.max(1, page);
     const cacheKey = createFilterCacheKey(categoryId, filters, validPage);
+
+    // Отключаем кеширование при использовании сортировки для получения актуальных данных
+    const cachedData = sortOrder === "asc" ? await redis.get(cacheKey) : null;
 
     // Добавляем проверку на существование категории
     const categoryExists = await db
@@ -271,7 +278,6 @@ export async function getFilteredProducts(
     }
 
     // Пытаемся получить данные из кеша
-    const cachedData = await redis.get(cacheKey);
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
       if (parsed.products) return parsed;
@@ -372,8 +378,12 @@ export async function getFilteredProducts(
         .where(and(...conditions))
         .limit(PAGE_SIZE)
         .offset((validPage - 1) * PAGE_SIZE)
-        // Добавляем стабильную сортировку по нескольким полям
-        .orderBy(products.price, products.id),
+        .orderBy(
+          // Добавляем явную типизацию для price
+          sortOrder === "asc"
+            ? sql`CAST(${products.price} AS DECIMAL)`
+            : sql`CAST(${products.price} AS DECIMAL) DESC`
+        ),
     ]);
 
     const totalItems = Number(count);
@@ -414,9 +424,10 @@ export async function getFilteredProducts(
       currentPage,
     };
 
-    // Кешируем результат
+    // Изменяем время кеширования и добавляем sortOrder в ключ кеша
     const cacheTTL = filters ? FILTERED_CACHE_TTL : CACHE_TTL;
-    await redis.setex(cacheKey, cacheTTL, JSON.stringify(result));
+    const cacheKeyWithSort = `${cacheKey}_sort_${sortOrder}`;
+    await redis.setex(cacheKeyWithSort, cacheTTL, JSON.stringify(result));
 
     return result;
   } catch (error) {

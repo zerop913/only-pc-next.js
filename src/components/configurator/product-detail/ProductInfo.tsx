@@ -7,6 +7,7 @@ interface ProductInfoProps {
   description?: string | null;
   price: number;
   brand?: string | null;
+  isFavorite?: boolean;
   onAddToFavorites?: () => void;
 }
 
@@ -15,6 +16,7 @@ export default function ProductInfo({
   description,
   price,
   brand,
+  isFavorite,
   onAddToFavorites,
 }: ProductInfoProps) {
   const isAvailable = true; // В реальном проекте это должно приходить из данных
@@ -47,7 +49,13 @@ export default function ProductInfo({
           title="Добавить в избранное"
           className="ml-3 p-3 rounded-lg bg-gradient-from/20 hover:bg-gradient-from/30 transition-all duration-300 border border-primary-border hover:border-primary-border/50 group/btn flex-shrink-0 hover:rotate-6"
         >
-          <HeartIcon className="w-6 h-6 text-secondary-light group-hover/btn:text-white transition-colors" />
+          <HeartIcon
+            className={`w-6 h-6 ${
+              isFavorite
+                ? "text-red-400"
+                : "text-secondary-light group-hover/btn:text-white"
+            } transition-colors`}
+          />
         </button>
       </div>
 
@@ -63,7 +71,6 @@ export default function ProductInfo({
 
       {description && (
         <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-4 mt-4 relative">
-          <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-from/20 rounded-bl-xl rounded-tr-lg"></div>
           <div>
             <p
               className={`text-secondary-light leading-relaxed ${

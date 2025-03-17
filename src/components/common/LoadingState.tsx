@@ -1,13 +1,13 @@
 import React from "react";
 
 interface LoadingStateProps {
-  isLoading: boolean;
+  isLoading?: boolean; // Делаем опциональным
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
 const LoadingState: React.FC<LoadingStateProps> = ({
-  isLoading,
+  isLoading = false, // Добавляем значение по умолчанию
   children,
   fallback,
 }) => {

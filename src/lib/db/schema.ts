@@ -150,6 +150,27 @@ export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
   }),
 }));
 
+// Таблица избранного
+export const favorites = pgTable("favorites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  productId: integer("product_id")
+    .references(() => products.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(users, {
+    fields: [favorites.userId],
+    references: [users.id],
+  }),
+  product: one(products, {
+    fields: [favorites.productId],
+    references: [products.id],
+  }),
+}));
+
 // Типы для использования в приложении
 export type Category = InferModel<typeof categories>;
 export type Product = InferModel<typeof products>;

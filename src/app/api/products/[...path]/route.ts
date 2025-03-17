@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
         return await handleProductListRequest(
           pathSegments,
           Math.max(1, Number(url.searchParams.get("page")) || 1),
-          parseFilterParams(url.searchParams)
+          parseFilterParams(url.searchParams),
+          request
         );
       }
     } catch (error: any) {
@@ -156,20 +157,31 @@ async function handleProductRequest(pathSegments: string[]) {
 async function handleProductListRequest(
   pathSegments: string[],
   page: number,
-  filters?: ProductFilters
-) {
+  filters?: ProductFilters,
+  request?: Request
+): Promise<NextResponse> {
+  // Получаем sortOrder из URL параметров, явно указываем тип
+  const url = new URL(request?.url || "");
+  const sortOrder = (url.searchParams.get("sort") || "asc") as "asc" | "desc";
+
   if (pathSegments.length === 2) {
     const result = await getProductsBySubcategory(
       pathSegments[0],
       pathSegments[1],
       page,
-      filters
+      filters,
+      sortOrder
     );
     return NextResponse.json(result);
   }
 
   if (pathSegments.length === 1) {
-    const result = await getProductsByCategory(pathSegments[0], page, filters);
+    const result = await getProductsByCategory(
+      pathSegments[0],
+      page,
+      filters,
+      sortOrder
+    );
     return NextResponse.json(result);
   }
 
