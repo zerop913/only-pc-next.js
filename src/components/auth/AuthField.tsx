@@ -34,7 +34,7 @@ export const AuthField = ({
     >
       <label
         htmlFor={name}
-        className="block text-sm font-medium text-secondary-light mb-2 opacity-80"
+        className="block text-xs sm:text-sm font-medium text-secondary-light mb-1.5 sm:mb-2 opacity-80"
       >
         {label}
       </label>
@@ -44,14 +44,14 @@ export const AuthField = ({
           id={name}
           placeholder={placeholder}
           className={`
-            w-full px-4 py-3 rounded-lg 
+            w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg 
             bg-gradient-from/10 
             border border-primary-border 
             text-white 
             placeholder-secondary-light/40 
             focus:outline-none focus:ring-1 focus:ring-blue-500/30
             transition-all duration-300
-            text-sm
+            text-xs sm:text-sm
             ${errors[name] ? "border-red-500" : ""}
             ${className}
           `}
@@ -65,7 +65,7 @@ export const AuthField = ({
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-light hover:text-white"
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         )}
       </div>
@@ -73,7 +73,7 @@ export const AuthField = ({
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-1 text-xs text-red-500"
+          className="mt-1 text-[10px] sm:text-xs text-red-500"
         >
           {errors[name]?.message as string}
         </motion.p>

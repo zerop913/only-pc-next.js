@@ -38,6 +38,7 @@ export function useFilters({
   const [expandedFilters, setExpandedFilters] = useState<
     Record<string, boolean>
   >({});
+  const [isResetting, setIsResetting] = useState(false);
 
   // URL для загрузки фильтров
   const filtersUrl = categorySlug
@@ -193,15 +194,23 @@ export function useFilters({
 
   const handleClearFilters = useCallback(() => {
     if (filtersData?.priceRange) {
-      setSelectedFilters({
-        brand: new Set(),
-        characteristics: new Map(),
-        priceRange: [filtersData.priceRange.min, filtersData.priceRange.max],
-      });
+      setIsResetting(true);
+      const newFilters: SelectedFilters = {
+        brand: new Set<string>(),
+        characteristics: new Map<string, Set<string>>(),
+        priceRange: [
+          filtersData.priceRange.min,
+          filtersData.priceRange.max,
+        ] as [number, number],
+      };
+
+      setSelectedFilters(newFilters);
       onFilterChange({}, [
         filtersData.priceRange.min,
         filtersData.priceRange.max,
       ]);
+
+      setTimeout(() => setIsResetting(false), 100);
     }
   }, [filtersData, onFilterChange]);
 
@@ -213,6 +222,7 @@ export function useFilters({
     toggleFilter,
     handlePriceRangeChange,
     handleClearFilters,
+    isResetting, // Добавляем в возвращаемый объект
   };
 }
 

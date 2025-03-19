@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -53,6 +54,10 @@ const QuickAction = ({
 const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
   const router = useRouter();
   const { isAuthenticated, user, logout, isInitialized } = useAuth();
+  const { favorites } = useFavorites();
+
+  // Получаем количество избранных товаров
+  const favoritesCount = Object.keys(favorites).length;
 
   // Оптимизированные варианты анимации
   const menuVariants = {
@@ -105,6 +110,11 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
     onClose();
   };
 
+  const handleFavoritesClick = () => {
+    router.push("/favorites");
+    onClose();
+  };
+
   // Если данные о статусе авторизации не загружены, откладываем рендеринг меню
   if (!isInitialized) {
     return null;
@@ -141,12 +151,21 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
         <div className="flex flex-col min-h-full">
           {/* Поиск */}
           <div className="p-4 border-b border-primary-border">
-            <SearchBar isMobile className="w-full" />
+            <SearchBar
+              isMobile
+              className="w-full"
+              onSearch={onClose} // Добавляем обработчик для закрытия меню
+            />
           </div>
 
           {/* Быстрые действия */}
           <div className="grid grid-cols-3 gap-3 p-4 border-b border-primary-border">
-            <QuickAction icon={HeartIcon} label="Избранное" count={2} />
+            <QuickAction
+              icon={HeartIcon}
+              label="Избранное"
+              count={favoritesCount}
+              onClick={handleFavoritesClick} // Добавляем обработчик
+            />
             <QuickAction icon={ShoppingCartIcon} label="Корзина" count={1} />
             <QuickAction
               icon={UserIcon}

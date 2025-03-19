@@ -31,6 +31,7 @@ export default function Filters({
     toggleFilter,
     handlePriceRangeChange,
     handleClearFilters,
+    isResetting, // Убедимся, что isResetting получен из хука
   } = useFilters({ onFilterChange, categorySlug, subcategorySlug });
 
   useEffect(() => {
@@ -45,23 +46,27 @@ export default function Filters({
       <>
         <button
           onClick={() => setIsOpen(true)}
-          className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-br from-[#1D1E2C] to-[#252736] text-white border border-primary-border hover:shadow-lg transition-all duration-300"
+          className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg bg-gradient-from/20 border border-primary-border/30 hover:bg-gradient-from/30 hover:border-primary-border/50 transition-all duration-300 text-secondary-light hover:text-white"
         >
-          <FunnelIcon className="w-5 h-5" />
-          <span>Фильтры</span>
+          <div className="flex items-center gap-2">
+            <FunnelIcon className="w-5 h-5 text-blue-400" />
+            <span>Фильтры</span>
+          </div>
           {selectedFilters.brand.size +
             Array.from(selectedFilters.characteristics.values()).reduce(
               (acc, set) => acc + set.size,
               0
             ) >
             0 && (
-            <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-2">
-              {selectedFilters.brand.size +
-                Array.from(selectedFilters.characteristics.values()).reduce(
-                  (acc, set) => acc + set.size,
-                  0
-                )}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/20">
+                {selectedFilters.brand.size +
+                  Array.from(selectedFilters.characteristics.values()).reduce(
+                    (acc, set) => acc + set.size,
+                    0
+                  )}
+              </span>
+            </div>
           )}
         </button>
 
@@ -102,7 +107,10 @@ export default function Filters({
           )}
         </h2>
         {(selectedFilters.brand.size > 0 ||
-          selectedFilters.characteristics.size > 0) && (
+          selectedFilters.characteristics.size > 0 ||
+          (filtersData &&
+            (selectedFilters.priceRange[0] > filtersData.priceRange.min ||
+              selectedFilters.priceRange[1] < filtersData.priceRange.max))) && (
           <button
             onClick={handleClearFilters}
             className="text-blue-500 text-sm hover:text-blue-400 px-3 py-1.5 rounded-md hover:bg-gradient-from/20 transition-colors"
@@ -121,6 +129,7 @@ export default function Filters({
             onRangeChange={handlePriceRangeChange}
             isExpanded={expandedFilters["price"]}
             onToggle={() => toggleFilter("price")}
+            isResetting={isResetting}
           />
 
           <FilterGroup

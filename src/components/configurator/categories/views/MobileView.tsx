@@ -15,10 +15,20 @@ export const MobileView: React.FC<MobileViewProps> = ({
     <div className="relative">
       <button
         onClick={toggleDropdown}
-        className="w-full p-4 rounded-lg bg-gradient-to-br from-[#1D1E2C] to-[#252736] flex items-center justify-between text-white"
+        className={`
+          w-full p-4 rounded-lg border transition-all duration-300
+          ${
+            selectedCategory
+              ? "bg-gradient-to-b from-blue-500/10 to-blue-600/5 border-blue-500/30"
+              : "bg-gradient-from/20 border-primary-border hover:bg-gradient-from/30"
+          }
+          flex items-center justify-between text-white relative overflow-hidden group
+        `}
       >
         <span
-          className={selectedCategory ? "text-white" : "text-secondary-light"}
+          className={
+            selectedCategory ? "text-white font-medium" : "text-secondary-light"
+          }
         >
           {selectedCategory ? selectedCategory.name : "Выберите категорию"}
         </span>
@@ -31,28 +41,53 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
       <AnimatePresence>
         {isDropdownOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute z-10 w-full mt-2 rounded-lg bg-primary border border-primary-border shadow-lg"
-          >
-            <div className="py-2">
-              {categories.map((category, index) => (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategorySelect(category, index)}
-                  className={`w-full px-4 py-3 flex items-center hover:bg-gradient-from/20 text-left ${
-                    selectedCategory?.id === category.id
-                      ? "text-white"
-                      : "text-secondary-light hover:text-white"
-                  }`}
-                >
-                  <span>{category.name}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+              onClick={toggleDropdown}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute z-50 w-full mt-2 rounded-lg bg-primary border border-primary-border shadow-lg"
+            >
+              <div className="py-2 max-h-[60vh] overflow-y-auto">
+                {categories.map((category, index) => (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategorySelect(category, index)}
+                    className={`
+                      w-full px-4 py-3 flex items-center gap-3 text-left transition-all duration-300
+                      relative overflow-hidden group
+                      ${
+                        selectedCategory?.id === category.id
+                          ? "bg-gradient-to-b from-blue-500/10 to-blue-600/5 text-white border-l-2 border-l-blue-500/50"
+                          : "text-secondary-light hover:bg-gradient-from/20 hover:text-white"
+                      }
+                    `}
+                  >
+                    {category.icon && (
+                      <img
+                        src={`/${category.icon}`}
+                        alt=""
+                        className={`w-5 h-5 transition-opacity ${
+                          selectedCategory?.id === category.id
+                            ? "opacity-100"
+                            : "opacity-70 group-hover:opacity-100"
+                        }`}
+                      />
+                    )}
+                    <span>{category.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -64,21 +99,25 @@ export const MobileView: React.FC<MobileViewProps> = ({
           transition={{ duration: 0.3 }}
           className="mt-4"
         >
-          <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {selectedCategory.children.map((subcategory) => (
               <button
                 key={subcategory.id}
                 onClick={() => handleSubcategorySelect(subcategory)}
                 className={`
-                  w-full px-4 py-3 rounded-lg text-sm bg-gradient-from/20 border border-primary-border
+                  group relative p-4 rounded-lg text-sm border transition-all duration-300 overflow-hidden
                   ${
                     selectedSubcategory?.id === subcategory.id
-                      ? "text-white bg-gradient-to-br from-[#2A2D3E] to-[#353849]"
-                      : "text-secondary-light"
+                      ? "bg-gradient-to-br from-[#2A2D3E] to-[#353849] border-blue-500/30 text-white"
+                      : "bg-gradient-from/20 border-primary-border text-secondary-light hover:text-white hover:bg-gradient-from/30"
                   }
                 `}
               >
-                {subcategory.name}
+                {selectedSubcategory?.id === subcategory.id && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-blue-500/50" />
+                )}
+                <div className="relative z-10">{subcategory.name}</div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-blue-500/0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
               </button>
             ))}
           </div>

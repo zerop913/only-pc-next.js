@@ -21,11 +21,31 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="w-full max-w-4xl bg-gradient-from/20 rounded-2xl p-12 relative overflow-hidden shadow-2xl"
+        className="w-full max-w-4xl bg-gradient-from/20 rounded-2xl p-6 sm:p-8 md:p-12 relative overflow-hidden shadow-2xl"
       >
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/30 to-purple-500/30"></div>
 
-        <div className="grid grid-cols-2 gap-12 relative">
+        {/* Мобильная версия */}
+        <div className="block lg:hidden space-y-6">
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+              {title}
+            </h2>
+            <div className="space-y-2 max-w-md mx-auto">
+              <div className="h-0.5 w-16 bg-blue-500/30 mx-auto"></div>
+              <p className="text-secondary-light text-sm sm:text-base">
+                Создайте свою идеальную конфигурацию
+              </p>
+              <p className="text-secondary-light text-sm sm:text-base">
+                Быстрый и удобный подбор комплектующих
+              </p>
+            </div>
+          </div>
+          {children}
+        </div>
+
+        {/* Десктопная версия */}
+        <div className="hidden lg:grid grid-cols-2 gap-12 relative">
           <div className="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
 
@@ -48,20 +68,20 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         </div>
 
         {linkText && linkHref && (
-          <div className="mt-10 text-center">
+          <div className="mt-8 lg:mt-10 text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="flex items-center justify-center gap-2"
             >
-              <div className="h-px w-12 bg-secondary-light/30"></div>
+              <div className="hidden sm:block h-px w-12 bg-secondary-light/30"></div>
               <Link
                 href={linkHref}
                 className="text-sm text-white hover:text-gray-300 transition-colors 
-        bg-gradient-from/10 px-4 py-2 rounded-lg 
-        border border-primary-border
-        flex items-center gap-2 group"
+                  bg-gradient-from/10 px-4 py-2 rounded-lg 
+                  border border-primary-border
+                  flex items-center gap-2 group"
               >
                 <span>{linkText}</span>
                 <motion.div
@@ -73,12 +93,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                   →
                 </motion.div>
               </Link>
-              <div className="h-px w-12 bg-secondary-light/30"></div>
+              <div className="hidden sm:block h-px w-12 bg-secondary-light/30"></div>
             </motion.div>
           </div>
         )}
 
-        <div className="mt-6 text-center text-xs text-secondary-light/50">
+        <div className="mt-6 text-center text-[10px] sm:text-xs text-secondary-light/50 px-4">
           Этот сайт защищен reCAPTCHA и применяются
           <a
             href="https://policies.google.com/privacy"

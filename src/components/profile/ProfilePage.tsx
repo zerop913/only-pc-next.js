@@ -48,7 +48,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 backdrop-blur-sm bg-opacity-80 duration-300 w-full max-w-full">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-from/30 sm:bg-gradient-from/20 backdrop-blur-none sm:backdrop-blur-sm duration-300 w-full max-w-full">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
           Личный кабинет
