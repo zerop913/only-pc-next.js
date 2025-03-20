@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, forwardRef } from "react";
 import {
   Tabs,
   TabsContent,
@@ -10,9 +10,24 @@ import {
 import { Users, Package, FolderTree, Settings } from "lucide-react";
 import UsersManagement from "@/components/admin/UsersManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
+import ProductsManagement from "@/components/admin/ProductsManagement";
+
+interface ProductsManagementRef {
+  setInitialCategory: (categoryId: number) => void;
+}
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
+  const productsRef = useRef<ProductsManagementRef>(null);
+
+  const handleNavigateToProducts = (categoryId: number) => {
+    setActiveTab("products");
+    setTimeout(() => {
+      if (productsRef.current) {
+        productsRef.current.setInitialCategory(categoryId);
+      }
+    }, 0);
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -60,23 +75,20 @@ export default function AdminPanel() {
             </div>
           </TabsContent>
 
-          <TabsContent value="products">
-            <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Управление товарами
-              </h2>
-              <p className="text-secondary-light">
-                Управление товарами в разработке...
-              </p>
-            </div>
-          </TabsContent>
-
           <TabsContent value="categories">
             <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
               <h2 className="text-xl font-semibold text-white mb-4">
                 Управление категориями
               </h2>
-              <CategoryManagement />
+              <CategoryManagement
+                onNavigateToProducts={handleNavigateToProducts}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="products">
+            <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
+              <ProductsManagement ref={productsRef} />
             </div>
           </TabsContent>
 

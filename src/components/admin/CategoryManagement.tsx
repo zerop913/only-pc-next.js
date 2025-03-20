@@ -4,7 +4,13 @@ import { FolderTree, Info as InfoIcon } from "lucide-react";
 import { CategoryDetailsModal } from "./modals/CategoryDetailsModal";
 import CategoryItem from "./CategoryItem";
 
-export default function CategoryManagement() {
+interface CategoryManagementProps {
+  onNavigateToProducts?: (categoryId: number) => void;
+}
+
+export default function CategoryManagement({
+  onNavigateToProducts,
+}: CategoryManagementProps) {
   const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] =
@@ -98,6 +104,7 @@ export default function CategoryManagement() {
           isOpen={showDetailsModal}
           onClose={() => setShowDetailsModal(false)}
           category={selectedCategory}
+          onNavigateToProducts={onNavigateToProducts}
         />
       )}
     </div>

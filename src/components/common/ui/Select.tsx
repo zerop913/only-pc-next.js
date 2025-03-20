@@ -9,9 +9,10 @@ interface Option {
 
 interface SelectProps {
   value: string | number;
-  onChange: (value: string | number) => void;
+  onChange: (value: string | number | undefined) => void;
   options: Option[];
   label?: string;
+  placeholder?: string;
 }
 
 export default function Select({
@@ -19,17 +20,13 @@ export default function Select({
   onChange,
   options,
   label,
+  placeholder = "Выберите значение",
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const selectedOption = options.find((opt) => opt.value === value);
-    if (selectedOption) {
-      setSelectedLabel(selectedOption.label);
-    }
-  }, [value, options]);
+  const selectedLabel =
+    options.find((opt) => opt.value === value)?.label || placeholder;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,16 +43,19 @@ export default function Select({
   }, []);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative h-full" ref={containerRef}>
       {label && (
         <label className="block text-sm text-secondary-light mb-2">
           {label}
         </label>
       )}
+
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-2 rounded-lg bg-gradient-from/20 border border-primary-border text-white hover:bg-gradient-from/30 transition-colors"
+        className="w-full h-full flex items-center justify-between px-4 py-2 rounded-lg 
+                 bg-gradient-from/10 border border-primary-border text-white 
+                 hover:bg-gradient-from/30 transition-colors"
       >
         <span className="block truncate">{selectedLabel}</span>
         <ChevronUpDownIcon className="w-5 h-5 text-secondary-light" />
@@ -79,12 +79,15 @@ export default function Select({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gradient-from/30 transition-colors
+                  className={`
+                    w-full text-left px-4 py-2 text-sm 
+                    hover:bg-gradient-from/30 transition-colors
                     ${
                       value === option.value
                         ? "text-white bg-gradient-from/40"
                         : "text-secondary-light hover:text-white"
-                    }`}
+                    }
+                  `}
                 >
                   {option.label}
                 </button>

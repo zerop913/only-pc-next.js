@@ -2,17 +2,20 @@ import { CategoryWithChildren } from "@/types/category";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { FolderTree, Package, GitBranch } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface CategoryDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   category: CategoryWithChildren;
+  onNavigateToProducts?: (categoryId: number) => void;
 }
 
 export const CategoryDetailsModal = ({
   isOpen,
   onClose,
   category,
+  onNavigateToProducts,
 }: CategoryDetailsModalProps) => {
   if (!isOpen) return null;
 
@@ -29,6 +32,9 @@ export const CategoryDetailsModal = ({
       cat.children.reduce((acc, child) => acc + countTotalProducts(child), 0)
     );
   };
+
+  const hasDirectProducts = category.productCount > 0;
+  const shouldShowProductsButton = hasDirectProducts;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -144,33 +150,51 @@ export const CategoryDetailsModal = ({
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Дерево подкатегорий */}
-          {category.children.length > 0 && (
-            <div className="p-4 mt-6 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-lg border border-primary-border">
-              <h3 className="text-lg font-medium text-white mb-4">
-                Прямые подкатегории
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {category.children.map((child) => (
-                  <div
-                    key={child.id}
-                    className="p-3 bg-gradient-from/10 rounded-lg border border-primary-border/50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FolderTree className="w-4 h-4 text-blue-400" />
-                      <span className="text-white">{child.name}</span>
+            {/* Показываем кнопку только если есть прямые товары */}
+            {shouldShowProductsButton && (
+              <button
+                onClick={() => {
+                  onClose();
+                  if (onNavigateToProducts) {
+                    onNavigateToProducts(category.id);
+                  }
+                }}
+                className="w-full px-4 py-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 
+                     text-blue-400 hover:text-blue-300 border border-blue-500/30 
+                     transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <Package className="w-5 h-5" />
+                <span>Перейти к товарам категории</span>
+              </button>
+            )}
+
+            {/* Дерево подкатегорий */}
+            {category.children.length > 0 && (
+              <div className="p-4 mt-6 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-lg border border-primary-border">
+                <h3 className="text-lg font-medium text-white mb-4">
+                  Прямые подкатегории
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {category.children.map((child) => (
+                    <div
+                      key={child.id}
+                      className="p-3 bg-gradient-from/10 rounded-lg border border-primary-border/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FolderTree className="w-4 h-4 text-blue-400" />
+                        <span className="text-white">{child.name}</span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-4 text-xs text-secondary-light">
+                        <span>Товаров: {child.productCount}</span>
+                        <span>Подкатегорий: {child.children.length}</span>
+                      </div>
                     </div>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-secondary-light">
-                      <span>Товаров: {child.productCount}</span>
-                      <span>Подкатегорий: {child.children.length}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </motion.div>
     </div>

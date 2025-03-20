@@ -6,13 +6,22 @@ export interface ProductCharacteristic {
 export interface Product {
   id: number;
   slug: string;
+  categoryId: number;
   title: string;
   price: number;
   brand: string;
-  image?: string | null;
-  description?: string | null;
-  categoryId: number;
-  characteristics: ProductCharacteristic[];
+  image: string | null;
+  description: string | null;
+  createdAt: string;
+  category?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  characteristics?: Array<{
+    type: string;
+    value: string;
+  }>;
 }
 
 export interface CategoryResponse {
