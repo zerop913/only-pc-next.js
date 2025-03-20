@@ -1,9 +1,15 @@
 export interface Category {
   id: number;
-  name: string;
   slug: string;
+  name: string;
+  parentId: number | null;
   icon: string | null;
-  children: Category[];
+  children?: Category[];
+  productCount: number;
+}
+
+export interface CategoryWithChildren extends Category {
+  children: CategoryWithChildren[];
 }
 
 export interface CategoryProduct {

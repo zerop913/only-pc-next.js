@@ -16,6 +16,7 @@ export interface User {
   id: number;
   email: string;
   roleId: number;
+  isAdmin?: boolean;
 }
 
 // Определяем типы для результатов операций
@@ -37,10 +38,8 @@ interface AuthContextType {
   checkAuth: () => Promise<void>;
 }
 
-// Создаем контекст
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Время между проверками токена (в мс) - 5 минут
 const TOKEN_CHECK_INTERVAL = 5 * 60 * 1000;
 
 export const AuthProvider: React.FC<{
@@ -48,12 +47,11 @@ export const AuthProvider: React.FC<{
 }> = ({ children }) => {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Устанавливаем true по умолчанию
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Функция проверки авторизации (выделена для переиспользования)
   const checkAuth = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -66,8 +64,18 @@ export const AuthProvider: React.FC<{
 
       if (response.ok) {
         const data = await response.json();
-        setIsAuthenticated(data.authenticated);
-        setUser(data.authenticated ? data.user : null);
+        if (data.authenticated && data.user) {
+          setIsAuthenticated(true);
+          const isAdmin = data.user.roleId === 1;
+          setUser({
+            ...data.user,
+            isAdmin,
+          });
+          console.log("Auth check successful:", { ...data.user, isAdmin });
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
       } else {
         setIsAuthenticated(false);
         setUser(null);

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/services/authService";
+import { db } from "@/lib/db";
+import { sql } from "drizzle-orm";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { jwtVerify } from "jose";
+import { redis } from "@/lib/redis";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +18,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Декодируем токен для получения userId
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || "default_secret"
+    );
+    const { payload } = await jwtVerify(token, secret);
+    const userId = (payload as any).userId;
+
+    if (userId) {
+      // Обновляем статус онлайн в Redis с TTL 5 минут
+      await redis.set(`user:${userId}:online`, "true", "EX", 300);
+
+      // Сначала получаем текущее значение updatedAt
+      const currentUser = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: { updatedAt: true },
+      });
+
+      await db
+        .update(users)
+        .set({
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: currentUser?.updatedAt,
+        })
+        .where(eq(users.id, userId));
+    }
+
     const user = await getCurrentUser(token);
 
     if (!user) {
@@ -21,7 +53,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Возвращаем только необходимые данные пользователя для UI
     const safeUser = {
       id: user.id,
       email: user.email,

@@ -106,7 +106,17 @@ export const users = pgTable("users", {
   password: varchar("password", { length: 255 }).notNull(),
   roleId: integer("role_id").references(() => roles.id),
   isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
+  lastLoginAt: timestamp("last_login_at", {
+    withTimezone: true,
+    mode: "string",
+  }),
 });
 
 // Таблица профилей пользователей

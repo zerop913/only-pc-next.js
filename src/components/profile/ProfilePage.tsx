@@ -11,13 +11,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/common/ui/tabs";
-import { User, Shield, Settings } from "lucide-react";
+import { User, Shield, Settings, ShieldAlert } from "lucide-react";
+import AdminTab from "./AdminTab";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [mounted, setMounted] = useState(false);
-  // Добавляем состояние для отслеживания обновлений профиля
   const [profileUpdated, setProfileUpdated] = useState(0);
 
   // Функция для обновления профиля
@@ -77,11 +77,16 @@ export default function ProfilePage() {
             <Settings className="w-4 h-4 mr-2" />
             <span className="whitespace-nowrap">Настройки</span>
           </TabsTrigger>
+          {user.roleId === 1 && (
+            <TabsTrigger value="admin">
+              <ShieldAlert className="w-4 h-4 mr-2" />
+              <span className="whitespace-nowrap">Админ панель</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-            {/* Передаем состояние обновления и key для принудительного ререндера */}
             <ProfileInfo
               user={user}
               key={`profile-info-${profileUpdated}`}
@@ -108,6 +113,12 @@ export default function ProfilePage() {
             </p>
           </div>
         </TabsContent>
+
+        {user.roleId === 1 && (
+          <TabsContent value="admin" className="space-y-6 w-full">
+            <AdminTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

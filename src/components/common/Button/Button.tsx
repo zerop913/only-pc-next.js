@@ -1,13 +1,10 @@
 import { ElementType } from "react";
 
-interface ButtonProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   icon?: ElementType;
-  onClick?: () => void;
   isTablet?: boolean;
-  className?: string;
   variant?: "default" | "mobile";
-  disabled?: boolean;
 }
 
 const Button = ({

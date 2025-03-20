@@ -72,6 +72,7 @@ type TokenUser = {
   id: number;
   email: string;
   roleId: number;
+  isActive: boolean;
 };
 
 // Функция для создания токена авторизации
@@ -135,7 +136,7 @@ export async function getCurrentUser(token: string) {
       id: user.id,
       email: user.email,
       roleId: user.roleId,
-      isActive: user.isActive,
+      isActive: user.isActive ?? true, // Используем значение по умолчанию если null
     };
 
     // Увеличиваем время жизни кеша до 24 часов
@@ -193,7 +194,7 @@ export async function registerUser(data: z.infer<typeof RegisterSchema>) {
     })
     .returning();
 
-  // Проверяем, что roleId не null (защитное программирование)
+  // Проверяем, что roleId не null
   if (newUser.roleId === null) {
     throw new Error("Не удалось назначить роль пользователю");
   }
@@ -203,6 +204,7 @@ export async function registerUser(data: z.infer<typeof RegisterSchema>) {
     id: newUser.id,
     email: newUser.email,
     roleId: newUser.roleId,
+    isActive: newUser.isActive ?? true,
   };
 
   // Генерируем токен авторизации
@@ -214,30 +216,33 @@ export async function registerUser(data: z.infer<typeof RegisterSchema>) {
 // Аутентификация пользователя
 export async function loginUser(data: z.infer<typeof LoginSchema>) {
   const validatedData = LoginSchema.parse(data);
+  const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, validatedData.email))
-    .limit(1);
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, validatedData.email),
+    with: {
+      profile: true,
+    },
+  });
 
   if (!user) {
     throw new Error("Пользователь не найден");
   }
 
-  const isPasswordValid = await bcrypt.compare(
+  const isValidPassword = await bcrypt.compare(
     validatedData.password,
     user.password
   );
 
-  if (!isPasswordValid) {
+  if (!isValidPassword) {
     throw new Error("Неверный пароль");
   }
 
-  // Проверяем, что roleId не null (защитное программирование)
-  if (user.roleId === null) {
-    throw new Error("У пользователя отсутствует роль");
-  }
+  // Обновляем lastLoginAt сразу в базе
+  await db
+    .update(users)
+    .set({ lastLoginAt: new Date().toISOString() })
+    .where(eq(users.id, user.id));
 
   // Кешируем пользователя
   const userToCache = {
@@ -258,13 +263,14 @@ export async function loginUser(data: z.infer<typeof LoginSchema>) {
   const safeUser: TokenUser = {
     id: user.id,
     email: user.email,
-    roleId: user.roleId,
+    roleId: user.roleId || 2,
+    isActive: user.isActive ?? true,
   };
 
   // Генерируем токен авторизации
   const token = generateAuthToken(safeUser);
 
-  return { user, token };
+  return { user: safeUser, token };
 }
 
 // Выход пользователя

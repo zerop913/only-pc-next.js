@@ -45,10 +45,10 @@ const Notification = ({
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 100 }}
-          className="fixed top-4 right-4 z-50"
+          className="fixed top-4 right-4 z-50 max-w-md"
         >
           <div
-            className={`px-4 py-3 rounded-lg shadow-lg border backdrop-blur-md ${getNotificationStyles(
+            className={`px-4 py-3 rounded-lg shadow-lg border bg-primary backdrop-blur-md ${getNotificationStyles(
               type
             )}`}
           >

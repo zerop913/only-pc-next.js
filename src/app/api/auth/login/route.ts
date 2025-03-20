@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginUser } from "@/services/authService";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +30,26 @@ export async function POST(request: NextRequest) {
 
     // Если каптча прошла проверку, продолжаем процесс входа
     const { user, token } = await loginUser(body);
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: "Аккаунт деактивирован. Обратитесь к администратору." },
+        { status: 403 }
+      );
+    }
+
+    const currentUser = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { updatedAt: true },
+    });
+
+    await db
+      .update(users)
+      .set({
+        lastLoginAt: new Date().toISOString(),
+        updatedAt: currentUser?.updatedAt,
+      })
+      .where(eq(users.id, user.id));
 
     // Устанавливаем токен в cookie с помощью NextResponse
     const response = NextResponse.json(
