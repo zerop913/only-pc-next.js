@@ -63,12 +63,32 @@ const mapProduct = (product: any): Product => ({
   slug: product.slug,
   title: product.title,
   price: Number(product.price),
-  brand: product.brand,
+  brand: product.brand || "",
   image: product.image,
   description: product.description,
   categoryId: product.categoryId,
   characteristics: [],
+  createdAt: product.createdAt
+    ? new Date(product.createdAt).toISOString()
+    : new Date().toISOString(),
+  category: product.category
+    ? {
+        id: product.category.id,
+        name: product.category.name,
+        slug: product.category.slug,
+      }
+    : undefined,
 });
+
+// Исправляем маппинг характеристик
+const mapCharacteristics = (chars: any[]): ProductCharacteristic[] => {
+  return chars
+    .filter((char) => char.type && char.value) // Фильтруем null значения
+    .map(({ type, value }) => ({
+      type: String(type),
+      value: String(value),
+    }));
+};
 
 export async function getProductsByCategory(
   categorySlug: string,
@@ -215,6 +235,9 @@ export async function getProductDetails(
       description: rawProduct.description || null,
       categoryId: Number(rawProduct.categoryId),
       characteristics: [],
+      createdAt: rawProduct.createdAt
+        ? new Date(rawProduct.createdAt).toISOString()
+        : new Date().toISOString(),
     };
 
     // Загружаем характеристики
@@ -415,9 +438,9 @@ export async function getFilteredProducts(
     const result: PaginatedProducts = {
       products: productsResult.map((product) => ({
         ...mapProduct(product),
-        characteristics: characteristics
-          .filter((c) => c.product_id === product.id)
-          .map(({ type, value }) => ({ type, value })),
+        characteristics: mapCharacteristics(
+          characteristics.filter((c) => c.product_id === product.id)
+        ),
       })),
       totalItems,
       totalPages,

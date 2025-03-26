@@ -1,11 +1,11 @@
 export interface Category {
   id: number;
-  slug: string;
   name: string;
+  slug: string;
   parentId: number | null;
   icon: string | null;
-  children?: Category[];
   productCount: number;
+  children?: CategoryWithChildren[]; // Делаем children опциональным
 }
 
 export interface CategoryWithChildren extends Category {

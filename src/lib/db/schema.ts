@@ -55,8 +55,8 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 // Определение типов характеристик
 export const characteristicsTypes = pgTable("characteristics_types", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
 });
 
 // Определение характеристик продуктов

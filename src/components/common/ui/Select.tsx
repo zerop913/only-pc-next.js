@@ -9,10 +9,11 @@ interface Option {
 
 interface SelectProps {
   value: string | number;
-  onChange: (value: string | number | undefined) => void;
+  onChange: (value: string | number) => void;
   options: Option[];
   label?: string;
   placeholder?: string;
+  useCustomScrollbar?: boolean; // Новый проп для определения типа прокрутки
 }
 
 export default function Select({
@@ -21,6 +22,7 @@ export default function Select({
   options,
   label,
   placeholder = "Выберите значение",
+  useCustomScrollbar = false, // По умолчанию используем обычную прокрутку
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,9 +70,14 @@ export default function Select({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-1 bg-primary border border-primary-border rounded-lg shadow-lg overflow-hidden"
+            className="absolute z-[200] w-full mt-1 bg-primary border border-primary-border rounded-lg shadow-lg"
           >
-            <div className="py-1">
+            <div
+              className={`overflow-y-auto ${
+                useCustomScrollbar ? "custom-scrollbar" : "hide-scrollbar"
+              }`}
+              style={{ maxHeight: "320px" }} // Примерно 10 строк
+            >
               {options.map((option) => (
                 <button
                   key={option.value}

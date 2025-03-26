@@ -24,7 +24,7 @@ body {
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+  scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -36,6 +36,28 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(
+    to bottom,
+    rgba(59, 130, 246, 0.3),
+    rgba(168, 85, 247, 0.3)
+  );
   border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(59, 130, 246, 0.4),
+    rgba(168, 85, 247, 0.4)
+  );
+}
+
+/* Добавляем новый класс для скрытия скроллбара */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
