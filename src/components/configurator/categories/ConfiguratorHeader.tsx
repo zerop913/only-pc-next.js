@@ -11,10 +11,18 @@ import {
 import CategoryGuide from "./CategoryGuide";
 import TotalPrice from "../../TotalPrice/TotalPrice";
 import { useConfigurator } from "@/contexts/ConfiguratorContext";
-import ConfigurationModal from "../modals/ConfigurationModal";
+import { useModal } from "@/contexts/ModalContext";
 
-const ConfiguratorHeader = () => {
-  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+interface ConfiguratorHeaderProps {
+  editingBuildName?: string | null;
+  editingBuildSlug?: string | null;
+}
+
+const ConfiguratorHeader = ({
+  editingBuildName,
+  editingBuildSlug,
+}: ConfiguratorHeaderProps) => {
+  const { openConfigurationModal, closeConfigurationModal } = useModal();
   const {
     selectedProducts,
     categories,
@@ -27,6 +35,18 @@ const ConfiguratorHeader = () => {
   const completedComponents = selectedProducts.length;
   const totalComponents = categories.length;
   const progress = getProgress();
+
+  const handleOpenModal = () => {
+    openConfigurationModal({
+      categories,
+      selectedProducts,
+      progress,
+      isComplete: isConfigurationComplete,
+      onClose: closeConfigurationModal,
+      editingBuildName,
+      editingBuildSlug,
+    });
+  };
 
   if (isLoading) {
     return <div>Загрузка...</div>;
@@ -52,7 +72,7 @@ const ConfiguratorHeader = () => {
         <div className="flex flex-col w-full md:w-auto">
           <div className="flex gap-2 w-full md:w-auto">
             <motion.button
-              onClick={() => setIsProgressModalOpen(true)}
+              onClick={handleOpenModal}
               className="flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border"
               whileTap={{ scale: 0.98 }}
             >
@@ -77,18 +97,6 @@ const ConfiguratorHeader = () => {
           <CategoryGuide />
         </div>
       </div>
-
-      <AnimatePresence>
-        {isProgressModalOpen && (
-          <ConfigurationModal
-            categories={categories}
-            selectedProducts={selectedProducts}
-            progress={progress}
-            isComplete={isConfigurationComplete}
-            onClose={() => setIsProgressModalOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };

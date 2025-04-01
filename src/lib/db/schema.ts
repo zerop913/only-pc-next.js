@@ -181,6 +181,28 @@ export const favoritesRelations = relations(favorites, ({ one }) => ({
   }),
 }));
 
+// Таблица сборок ПК
+export const pcBuilds = pgTable("pc_builds", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  components: text("components").notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Добавляем отношения для сборок
+export const pcBuildsRelations = relations(pcBuilds, ({ one }) => ({
+  user: one(users, {
+    fields: [pcBuilds.userId],
+    references: [users.id],
+  }),
+}));
+
 // Типы для использования в приложении
 export type Category = InferModel<typeof categories>;
 export type Product = InferModel<typeof products>;
@@ -189,6 +211,7 @@ export type ProductCharacteristic = InferModel<typeof productCharacteristics>;
 export type Role = InferModel<typeof roles>;
 export type User = InferModel<typeof users>;
 export type UserProfile = InferModel<typeof userProfiles>;
+export type PcBuild = InferModel<typeof pcBuilds>;
 
 // Типы для вставки
 export type NewCategory = InferModel<typeof categories, "insert">;
@@ -204,3 +227,4 @@ export type NewProductCharacteristic = InferModel<
 export type NewRole = InferModel<typeof roles, "insert">;
 export type NewUser = InferModel<typeof users, "insert">;
 export type NewUserProfile = InferModel<typeof userProfiles, "insert">;
+export type NewPcBuild = InferModel<typeof pcBuilds, "insert">;

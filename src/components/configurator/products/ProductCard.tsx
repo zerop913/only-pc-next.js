@@ -10,7 +10,7 @@ import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useConfigurator } from "@/contexts/ConfiguratorContext";
 import { AnimatePresence } from "framer-motion";
-import ReplaceProductModal from "../modals/ReplaceProductModal";
+import ReplaceProductModal from "@/components/modals/configurator/ReplaceProductModal";
 import Notification from "@/components/common/Notification/Notification";
 import { useFavorites } from "@/contexts/FavoritesContext";
 

@@ -10,13 +10,12 @@ const nextConfig = {
       dns: false,
       "pg-native": false,
     };
-
     return config;
   },
-  server: {
-    port: 5000,
-  },
+  serverExternalPackages: [],
   reactStrictMode: false,
 };
+
+process.env.PORT = process.env.PORT || "5000";
 
 export default nextConfig;

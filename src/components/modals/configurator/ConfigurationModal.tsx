@@ -1,3 +1,4 @@
+// (переместить существующий код ConfigurationModal сюда)
 import { AnimatePresence, motion } from "framer-motion";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Category } from "@/types/category";
@@ -8,6 +9,8 @@ import {
 import { Product } from "@/types/product";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import SaveBuildModal from "./SaveBuildModal";
+import { useModal } from "@/contexts/ModalContext";
 
 interface ConfigurationModalProps {
   categories: Category[];
@@ -15,6 +18,8 @@ interface ConfigurationModalProps {
   progress: number;
   isComplete: boolean;
   onClose: () => void;
+  editingBuildName?: string | null; // Обновляем тип, чтобы он мог принимать null
+  editingBuildSlug?: string | null; // Добавляем slug редактируемой сборки
 }
 
 export default function ConfigurationModal({
@@ -23,17 +28,42 @@ export default function ConfigurationModal({
   progress,
   isComplete,
   onClose,
+  editingBuildName,
+  editingBuildSlug,
 }: ConfigurationModalProps) {
   const router = useRouter();
   const { clearConfiguration } = useConfigurator();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const {
+    openSaveBuildModal,
+    openReplaceProductModal,
+    closeConfigurationModal,
+  } = useModal();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Проверяем авторизацию при монтировании
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/check");
+        const data = await response.json();
+        setIsAuthenticated(data.isAuthenticated);
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
   }, []);
 
   const totalPrice = selectedProducts.reduce(
@@ -62,6 +92,68 @@ export default function ConfigurationModal({
     clearConfiguration();
     setShowClearConfirm(false);
     onClose();
+  };
+
+  const handleSaveBuild = async (name: string) => {
+    try {
+      const components = selectedProducts.reduce((acc, selected) => {
+        const category = categories.find(
+          (cat) =>
+            cat.id === selected.categoryId ||
+            cat.children?.some((sub) => sub.id === selected.categoryId)
+        );
+
+        if (category) {
+          const rootCategory =
+            categories.find((c) =>
+              c.children?.some((sub) => sub.id === selected.categoryId)
+            ) || category;
+
+          acc[rootCategory.slug] = selected.product.slug;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+      console.log("Sending data:", { name, components });
+
+      const response = await fetch("/api/builds", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          components,
+          isEditing: !!editingBuildName,
+          buildSlug: editingBuildSlug, // Добавляем slug редактируемой сборки
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server response:", errorData);
+        throw new Error(errorData.error || "Failed to save build");
+      }
+
+      const result = await response.json();
+      console.log("Server response:", result);
+
+      onClose();
+      router.push(`/catalog`);
+    } catch (error: any) {
+      console.error("Error saving build:", error);
+      throw new Error(error.message || "Ошибка при сохранении сборки");
+    }
+  };
+
+  const handleSaveClick = () => {
+    openSaveBuildModal({
+      onClose: () => setShowSaveModal(false),
+      onSave: handleSaveBuild,
+      initialName: editingBuildName || "",
+      isEditing: !!editingBuildName,
+    });
   };
 
   return (
@@ -126,7 +218,7 @@ export default function ConfigurationModal({
                         <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center">
                           <CheckIcon className="w-4 h-4 text-white" />
                         </div>
-                        <div>
+                        <div className="flex-grow">
                           <h3 className="text-sm sm:text-base font-medium text-white">
                             Сборка завершена!
                           </h3>
@@ -134,6 +226,14 @@ export default function ConfigurationModal({
                             Все необходимые компоненты выбраны
                           </p>
                         </div>
+                        <button
+                          onClick={handleSaveClick}
+                          className="px-3 py-1.5 text-sm bg-blue-500/10 hover:bg-blue-500/20 
+                                    text-blue-400 hover:text-blue-300 rounded-md 
+                                    border border-blue-500/30 transition-all duration-300"
+                        >
+                          Сохранить
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -307,7 +407,7 @@ export default function ConfigurationModal({
                     <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center">
                       <CheckIcon className="w-4 h-4 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-grow">
                       <h3 className="text-sm sm:text-base font-medium text-white">
                         Сборка завершена!
                       </h3>
@@ -315,6 +415,14 @@ export default function ConfigurationModal({
                         Все необходимые компоненты выбраны
                       </p>
                     </div>
+                    <button
+                      onClick={handleSaveClick}
+                      className="px-3 py-1.5 text-sm bg-blue-500/10 hover:bg-blue-500/20 
+                                text-blue-400 hover:text-blue-300 rounded-md 
+                                border border-blue-500/30 transition-all duration-300"
+                    >
+                      Сохранить
+                    </button>
                   </div>
                 </div>
               </motion.div>

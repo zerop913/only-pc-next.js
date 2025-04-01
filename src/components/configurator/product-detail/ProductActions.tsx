@@ -3,9 +3,9 @@ import { useState, useCallback } from "react";
 import { useConfigurator } from "@/contexts/ConfiguratorContext";
 import { Product } from "@/types/product";
 import { AnimatePresence } from "framer-motion";
-import ReplaceProductModal from "../modals/ReplaceProductModal";
 import Notification from "@/components/common/Notification/Notification";
 import { NotificationType } from "../products/ProductCard";
+import { useModal } from "@/contexts/ModalContext";
 
 interface ProductActionsProps {
   product: Product;
@@ -13,10 +13,7 @@ interface ProductActionsProps {
 
 export default function ProductActions({ product }: ProductActionsProps) {
   const { addProduct, removeProduct, getProductByCategory } = useConfigurator();
-  const [showReplaceModal, setShowReplaceModal] = useState(false);
-  const [conflictingProduct, setConflictingProduct] = useState<Product | null>(
-    null
-  );
+  const { openReplaceProductModal, closeModal } = useModal();
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] =
@@ -28,28 +25,34 @@ export default function ProductActions({ product }: ProductActionsProps) {
   }, [getProductByCategory, product.categoryId, product.id]);
 
   const handleAddOrRemove = async () => {
-    // Закрываем предыдущее уведомление, если оно есть
-    if (showNotification) {
-      setShowNotification(false);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
     try {
       if (isProductInConfiguration()) {
         removeProduct(product.categoryId);
         setNotificationMessage("Товар убран из сборки");
         setNotificationType("error");
+        setShowNotification(true);
       } else {
         await addProduct(product);
         setNotificationMessage("Товар добавлен в сборку");
         setNotificationType("success");
+        setShowNotification(true);
       }
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
     } catch (error) {
       if (error instanceof Error && error.message === "REPLACE_CONFLICT") {
-        setConflictingProduct(error.cause as Product);
-        setShowReplaceModal(true);
+        openReplaceProductModal({
+          currentProduct: error.cause as Product,
+          newProduct: product,
+          onConfirm: () => {
+            addProduct(product, true);
+            setNotificationMessage("Товар успешно заменен");
+            setNotificationType("info");
+            setShowNotification(true);
+            closeModal(); // Закрываем все модальные окна
+          },
+          onCancel: () => {
+            closeModal(); // Закрываем все модальные окна
+          },
+        });
       }
     }
   };
@@ -95,27 +98,6 @@ export default function ProductActions({ product }: ProductActionsProps) {
         isVisible={showNotification}
         onClose={() => setShowNotification(false)}
       />
-
-      <AnimatePresence>
-        {showReplaceModal && conflictingProduct && (
-          <ReplaceProductModal
-            currentProduct={conflictingProduct}
-            newProduct={product}
-            onConfirm={() => {
-              addProduct(product, true);
-              setShowReplaceModal(false);
-              setNotificationMessage("Товар успешно заменен");
-              setNotificationType("info");
-              setShowNotification(true);
-              setTimeout(() => setShowNotification(false), 3000);
-            }}
-            onCancel={() => {
-              setShowReplaceModal(false);
-              setConflictingProduct(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { ClientLayout } from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ConfiguratorProvider } from "@/contexts/ConfiguratorContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { ModalProvider } from "@/contexts/ModalContext";
 import LoadingState from "@/components/common/LoadingState";
 import "@fontsource/montserrat-alternates";
 import "../styles/globals.css";
@@ -24,7 +25,9 @@ export default function RootLayout({
           <LoadingState>
             <FavoritesProvider>
               <ConfiguratorProvider>
-                <ClientLayout>{children}</ClientLayout>
+                <ModalProvider>
+                  <ClientLayout>{children}</ClientLayout>
+                </ModalProvider>
               </ConfiguratorProvider>
             </FavoritesProvider>
           </LoadingState>

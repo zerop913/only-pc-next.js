@@ -11,8 +11,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/common/ui/tabs";
-import { User, Shield, Settings, ShieldAlert } from "lucide-react";
+import { User, Shield, Settings, ShieldAlert, Package } from "lucide-react";
 import AdminTab from "./AdminTab";
+import ProfileBuilds from "./ProfileBuilds";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
@@ -48,7 +49,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-from/30 sm:bg-gradient-from/20 backdrop-blur-none sm:backdrop-blur-sm duration-300 w-full max-w-full">
+    <div className="p-4 sm:p-6 lg:p-8 backdrop-blur-none sm:backdrop-blur-sm duration-300 w-full max-w-full">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
           Личный кабинет
@@ -68,6 +69,10 @@ export default function ProfilePage() {
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-2" />
             <span className="whitespace-nowrap">Профиль</span>
+          </TabsTrigger>
+          <TabsTrigger value="builds">
+            <Package className="w-4 h-4 mr-2" />
+            <span className="whitespace-nowrap">Мои сборки</span>
           </TabsTrigger>
           <TabsTrigger value="security">
             <Shield className="w-4 h-4 mr-2" />
@@ -97,6 +102,10 @@ export default function ProfilePage() {
               onProfileUpdate={handleProfileUpdate}
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="builds" className="space-y-6 w-full">
+          <ProfileBuilds />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6 w-full">

@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCategoryByPath } from "@/services/categoryService";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const pathSegments = params.path;
-    const category = await getCategoryByPath(pathSegments);
+    // Получаем путь из URL вместо params
+    const segments = request.nextUrl.pathname
+      .split("/")
+      .filter(
+        (segment) => segment && segment !== "api" && segment !== "categories"
+      );
+
+    const category = await getCategoryByPath(segments);
 
     if (!category) {
       return NextResponse.json(

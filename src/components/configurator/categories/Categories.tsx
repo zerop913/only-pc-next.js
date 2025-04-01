@@ -17,6 +17,8 @@ import { Product } from "@/types/product";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { usePreloadData } from "@/hooks/usePreloadData";
 import { usePagination } from "@/hooks/usePagination";
+import { useConfigurator } from "@/contexts/ConfiguratorContext";
+import { DetailedComponent } from "@/types/pcbuild"; // Добавляем импорт DetailedComponent
 
 // Обновляем функцию fetcher для лучшей обработки ошибок
 const fetcher = async (url: string) => {
@@ -56,6 +58,9 @@ const Categories = () => {
   const searchParams = useSearchParams();
   const [isMobile, setIsMobile] = useState(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const { addProduct } = useConfigurator(); // Получаем addProduct из контекста
+  const [editingBuildName, setEditingBuildName] = useState<string | null>(null);
+  const [editingBuildSlug, setEditingBuildSlug] = useState<string | null>(null);
 
   // Получаем категории
   const { data: categories = [], isLoading: isCategoriesLoading } = useSWR(
@@ -171,6 +176,44 @@ const Categories = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    const loadBuildSlug = searchParams.get("loadBuild");
+    if (loadBuildSlug) {
+      const loadSavedBuild = async () => {
+        try {
+          const response = await fetch(`/api/builds/${loadBuildSlug}`);
+          const data = await response.json();
+
+          if (response.ok && data.build) {
+            // Сохраняем название редактируемой сборки
+            setEditingBuildName(data.build.name);
+            setEditingBuildSlug(data.build.slug); // Сохраняем slug редактируемой сборки
+
+            // Загружаем компоненты только один раз
+            const componentsToAdd = new Set();
+            data.build.components.forEach((component: DetailedComponent) => {
+              if (!componentsToAdd.has(component.product.id)) {
+                componentsToAdd.add(component.product.id);
+                addProduct(component.product, true);
+              }
+            });
+
+            // Очищаем параметр loadBuild из URL
+            const newParams = new URLSearchParams(searchParams.toString());
+            newParams.delete("loadBuild");
+            router.replace(`/configurator?${newParams.toString()}`, {
+              scroll: false,
+            });
+          }
+        } catch (error) {
+          console.error("Error loading build:", error);
+        }
+      };
+
+      loadSavedBuild();
+    }
+  }, [searchParams, addProduct, router]); // Добавляем router в зависимости
+
   if (isCategoriesLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -182,7 +225,10 @@ const Categories = () => {
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="bg-primary rounded-xl p-4 sm:p-6 shadow-lg border border-primary-border">
-        <ConfiguratorHeader />
+        <ConfiguratorHeader
+          editingBuildName={editingBuildName}
+          editingBuildSlug={editingBuildSlug}
+        />
 
         {isMobile ? (
           <MobileView
@@ -203,7 +249,8 @@ const Categories = () => {
 
         {/* Показываем SubcategoryWelcome, если есть подкатегории и не выбрана подкатегория */}
         {selectedCategory &&
-          selectedCategory.children?.length > 0 &&
+          selectedCategory.children &&
+          selectedCategory.children.length > 0 &&
           !selectedSubcategory && (
             <SubcategoryWelcome category={selectedCategory} />
           )}
