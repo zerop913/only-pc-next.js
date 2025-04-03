@@ -9,12 +9,14 @@ import { AuthField } from "@/components/auth/AuthField";
 import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const { register: registerUser, error, isLoading } = useAuth();
+  const { error, isLoading, setIsLoading, setError } = useAuth();
   const [captchaError, setCaptchaError] = useState<string | undefined>();
   const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
   const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
+  const router = useRouter();
 
   const {
     register,
@@ -44,13 +46,46 @@ export default function RegisterPage() {
     }
   };
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
       setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
       return;
     }
 
-    registerUser(data);
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Ошибка регистрации");
+      }
+
+      // Сохраняем данные для верификации
+      sessionStorage.setItem("verificationEmail", data.email);
+      sessionStorage.setItem(
+        "loginData",
+        JSON.stringify({
+          email: data.email,
+          password: data.password,
+        })
+      );
+
+      // Перенаправляем на страницу верификации
+      router.push("/verify");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Произошла ошибка");
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Добавляем сообщение в консоль для отслеживания

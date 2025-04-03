@@ -36,6 +36,8 @@ interface AuthContextType {
   register: (data: z.infer<typeof RegisterSchema>) => Promise<AuthResult>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  setError: (error: string | null) => void; // Добавляем setError
+  setIsLoading: (loading: boolean) => void; // Добавляем setIsLoading
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,43 +82,37 @@ export const AuthProvider: React.FC<{
         setIsAuthenticated(false);
         setUser(null);
       }
-
-      // Отмечаем, что первичная инициализация завершена
-      if (!isInitialized) {
-        setIsInitialized(true);
-      }
     } catch (err) {
       console.error("Ошибка проверки аутентификации:", err);
       setIsAuthenticated(false);
       setUser(null);
-
-      if (!isInitialized) {
-        setIsInitialized(true);
-      }
     } finally {
       setIsLoading(false);
+      setIsInitialized(true);
     }
-  }, [isInitialized]);
+  }, []);
 
-  // Проверяем состояние аутентификации при инициализации хука
   useEffect(() => {
-    checkAuth();
-
-    // Настраиваем периодическую проверку токена
-    const intervalId = setInterval(() => {
-      checkAuth();
-    }, TOKEN_CHECK_INTERVAL);
-
-    // Также проверяем при фокусе на вкладке
-    const handleFocus = () => {
-      checkAuth();
+    const initialize = async () => {
+      await checkAuth();
+      const interval = setInterval(checkAuth, TOKEN_CHECK_INTERVAL);
+      return () => clearInterval(interval);
     };
 
-    window.addEventListener("focus", handleFocus);
+    initialize();
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkAuth();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", checkAuth);
 
     return () => {
-      clearInterval(intervalId);
-      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", checkAuth);
     };
   }, [checkAuth]);
 
@@ -208,6 +204,8 @@ export const AuthProvider: React.FC<{
     register,
     logout,
     checkAuth,
+    setError,
+    setIsLoading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

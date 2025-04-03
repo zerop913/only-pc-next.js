@@ -9,6 +9,7 @@ import { ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Fragment, useState, useEffect } from "react";
+import Link from "next/link";
 
 interface ActionButtonProps {
   icon: ElementType;
@@ -161,7 +162,6 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
     );
   }
 
-  // Стандартное отображение для мобильных устройств или неавторизованных пользователей
   return (
     <div
       className={`flex ${

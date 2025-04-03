@@ -8,10 +8,14 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthField } from "@/components/auth/AuthField";
 import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { login, error, isLoading } = useAuth();
+  const router = useRouter();
+  const { login, error } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
   const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
 
@@ -45,12 +49,34 @@ export default function LoginPage() {
       return;
     }
 
-    const result = await login(data);
+    try {
+      setIsSubmitting(true);
+      setLocalError(null);
 
-    if (!result.success) {
+      const response = await fetch("/api/auth/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Ошибка отправки кода");
+      }
+
+      // Сохраняем данные для страницы верификации
+      sessionStorage.setItem("verificationEmail", data.email);
+      sessionStorage.setItem("loginData", JSON.stringify(data));
+
+      // Перенаправляем на страницу ввода кода
+      router.push("/verify");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Произошла ошибка";
+      setLocalError(errorMessage);
       captchaRef.current?.resetCaptcha();
-      setValue("captchaToken", "");
-      setCaptchaVerified(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -88,12 +114,14 @@ export default function LoginPage() {
           }}
         />
 
-        {error && (
-          <div className="text-red-500 text-sm text-center mb-4">{error}</div>
+        {(error || localError) && (
+          <div className="text-red-500 text-sm text-center mb-4">
+            {error || localError}
+          </div>
         )}
 
-        <Button className="w-full mt-6 justify-center" disabled={isLoading}>
-          {isLoading ? "Вход..." : "Войти"}
+        <Button className="w-full mt-6 justify-center" disabled={isSubmitting}>
+          {isSubmitting ? "Вход..." : "Войти"}
         </Button>
       </form>
     </AuthLayout>

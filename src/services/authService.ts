@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
 import jwt from "jsonwebtoken";
+import { sendVerificationCode } from "@/services/emailService";
 
 // Время жизни кеша в секундах (1 час)
 const CACHE_TTL = 3600;
@@ -43,6 +44,12 @@ export const LoginSchema = z.object({
   captchaToken: z.string({
     required_error: "Подтвердите, что вы не робот",
   }),
+});
+
+// Схема для верификации кода
+export const VerifyLoginSchema = z.object({
+  email: z.string().email("Некорректный email"),
+  password: z.string().min(1, "Пароль обязателен"),
 });
 
 export const ProfileSchema = z.object({
@@ -158,7 +165,7 @@ export async function getCurrentUser(token: string) {
 export async function registerUser(data: z.infer<typeof RegisterSchema>) {
   const validatedData = RegisterSchema.parse(data);
 
-  // Проверка существования пользователя
+  // Проверяем существование пользователя
   const existingUser = await db
     .select()
     .from(users)
@@ -194,28 +201,12 @@ export async function registerUser(data: z.infer<typeof RegisterSchema>) {
     })
     .returning();
 
-  // Проверяем, что roleId не null
-  if (newUser.roleId === null) {
-    throw new Error("Не удалось назначить роль пользователю");
-  }
-
-  // Создаем объект безопасного пользователя для токена
-  const safeUser: TokenUser = {
-    id: newUser.id,
-    email: newUser.email,
-    roleId: newUser.roleId,
-    isActive: newUser.isActive ?? true,
-  };
-
-  // Генерируем токен авторизации
-  const token = generateAuthToken(safeUser);
-
-  return { user: newUser, token };
+  return { user: newUser };
 }
 
 // Аутентификация пользователя
-export async function loginUser(data: z.infer<typeof LoginSchema>) {
-  const validatedData = LoginSchema.parse(data);
+export async function loginUser(data: z.infer<typeof VerifyLoginSchema>) {
+  const validatedData = VerifyLoginSchema.parse(data);
   const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
   const user = await db.query.users.findFirst({

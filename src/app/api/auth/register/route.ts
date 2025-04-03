@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registerUser } from "@/services/authService";
+import { sendVerificationCode } from "@/services/emailService";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Сначала проверяем каптчу через серверный API
+    // Проверяем капчу
     const captchaResponse = await fetch(
       `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${body.captchaToken}`,
       {
@@ -25,38 +26,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Если каптча прошла проверку, продолжаем процесс регистрации
+    // Регистрируем пользователя
     const { user } = await registerUser(body);
 
-    // Проверяем, что roleId не null
-    if (user.roleId === null) {
-      return NextResponse.json(
-        { error: "Не удалось назначить роль пользователю" },
-        { status: 500 }
-      );
-    }
-
-    // Возвращаем только безопасные данные пользователя
-    const safeUser = {
-      id: user.id,
-      email: user.email,
-      roleId: user.roleId,
-    };
+    // После успешной регистрации отправляем код подтверждения
+    await sendVerificationCode(user.email, request.nextUrl.origin);
 
     return NextResponse.json(
-      { user: safeUser, message: "Регистрация успешна" },
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          roleId: user.roleId,
+        },
+        message: "Регистрация успешна, проверьте почту для подтверждения",
+      },
       { status: 201 }
     );
   } catch (error) {
     console.error("Registration error:", error);
-
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
     return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "Ошибка регистрации" },
+      { status: 400 }
     );
   }
 }
