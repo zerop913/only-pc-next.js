@@ -3,22 +3,36 @@ import { useRouter } from "next/navigation";
 import { FavoriteProduct } from "@/types/favorite";
 import { Trash2, ImageIcon } from "lucide-react";
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Notification from "@/components/common/Notification/Notification";
 import { motion } from "framer-motion";
 
 interface ProductCardProps {
-  product: FavoriteProduct;
+  favoriteItem: FavoriteProduct;
   onRemove?: () => void;
 }
 
-export default function ProductCard({ product, onRemove }: ProductCardProps) {
+export default function ProductCard({
+  favoriteItem,
+  onRemove,
+}: ProductCardProps) {
   const router = useRouter();
   const { removeFromFavorites } = useFavorites();
   const [imageLoading, setImageLoading] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  // Получаем данные о продукте из favoriteItem
+  const product = favoriteItem?.product;
+
+  // Проверка, что favoriteItem и product существуют и имеют id
+  if (!favoriteItem || !favoriteItem.id || !product || !product.id) {
+    console.error("Invalid favorite item data:", favoriteItem);
+    return null;
+  }
 
   const handleClick = () => {
+    if (isRemoving || !product) return;
     router.push(
       `/product/${product.slug}?category=${product.category?.slug || ""}`
     );
@@ -27,133 +41,124 @@ export default function ProductCard({ product, onRemove }: ProductCardProps) {
   const handleRemoveFromFavorites = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    if (isRemoving) return;
+
     try {
-      // Сначала вызываем колбэк для уведомления
-      onRemove?.();
-      // Добавляем небольшую задержку перед удалением
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await removeFromFavorites(product.id);
+      setIsRemoving(true);
+
+      // Используем ID из favoriteItem для удаления из избранного
+      await removeFromFavorites(favoriteItem.id);
+      setShowNotification(true);
+
+      setTimeout(() => {
+        setShowNotification(false);
+        // Вызываем onRemove после того, как уведомление исчезнет
+        if (onRemove) {
+          onRemove();
+        }
+      }, 2000);
     } catch (error) {
       console.error("Error removing from favorites:", error);
+      setIsRemoving(false);
     }
   };
 
-  const getImagePath = (imageSrc: string | undefined): string => {
-    if (!imageSrc) return "";
-    return imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+  // Обрабатываем путь к изображению
+  const getImagePath = (): string => {
+    if (!product.image) return "";
+
+    // Проверяем, является ли путь к изображению абсолютным URL
+    if (product.image.startsWith("http")) {
+      return product.image;
+    }
+
+    // Добавляем слеш в начале, если его нет
+    return product.image.startsWith("/") ? product.image : `/${product.image}`;
   };
 
   return (
     <>
       <motion.div
-        layout
-        initial={{ opacity: 1, height: "auto" }}
-        exit={{
-          opacity: 0,
-          height: 0,
-          marginTop: 0,
-          marginBottom: 0,
-          transition: {
-            opacity: { duration: 0.2 },
-            height: { duration: 0.2, delay: 0.1 },
-            marginTop: { duration: 0.2 },
-            marginBottom: { duration: 0.2 },
-          },
-        }}
-        className="mb-4 last:mb-0"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.3 }}
+        onClick={handleClick}
+        className="group relative bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden transition-all duration-300 hover:bg-gradient-from/20 hover:border-blue-500/30 cursor-pointer"
       >
-        <div className="group bg-gradient-from/30 hover:bg-gradient-from/40 rounded-lg border border-primary-border/50 transition-all duration-300">
-          <div className="flex flex-col sm:flex-row gap-4 p-4">
-            {/* Изображение */}
-            <div className="relative w-full sm:w-48 h-48 sm:h-36 flex-shrink-0">
-              <div className="absolute inset-0 bg-gradient-from/20 rounded-lg" />
-              {product.image ? (
-                <>
-                  <div
-                    className={`absolute inset-0 backdrop-blur-sm transition-opacity duration-300 ${
-                      imageLoading ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
-                  <Image
-                    src={getImagePath(product.image)}
-                    alt={product.title}
-                    fill
-                    className={`object-contain rounded-lg transition-all duration-300 ${
-                      imageLoading ? "opacity-0" : "opacity-100"
-                    }`}
-                    onLoad={() => setImageLoading(false)}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center rounded-lg border border-primary-border/50">
-                  <ImageIcon className="w-8 h-8 text-secondary-light" />
-                </div>
-              )}
+        {/* Декоративная полоска */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Область изображения */}
+        <div className="aspect-square relative bg-gradient-from/20 overflow-hidden border-b border-primary-border/50">
+          {product.image ? (
+            <>
+              <div
+                className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 backdrop-blur-sm ${
+                  imageLoading ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <div className="animate-pulse w-12 h-12 rounded-full bg-gradient-from/30" />
+              </div>
+              <div className="w-full h-full flex items-center justify-center p-6">
+                <Image
+                  src={getImagePath()}
+                  alt={product.title}
+                  width={200}
+                  height={200}
+                  className={`
+                    object-contain w-full h-full transition-all duration-300
+                    ${
+                      imageLoading
+                        ? "opacity-0"
+                        : "opacity-100 group-hover:scale-[1.02]"
+                    }
+                  `} // Уменьшен эффект приближения изображения
+                  onLoadingComplete={() => setImageLoading(false)}
+                  onError={() => {
+                    console.error(`Image failed to load: ${product.image}`);
+                    setImageLoading(false);
+                  }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ImageIcon className="w-16 h-16 text-secondary-light/30" />
             </div>
+          )}
 
-            {/* Информация о товаре */}
-            <div className="flex flex-col flex-grow min-w-0">
-              <div className="flex-grow">
-                {/* Верхняя часть с брендом и кнопкой удаления */}
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  {product.brand && (
-                    <span className="text-sm text-secondary-light">
-                      {product.brand}
-                    </span>
-                  )}
-                  <button
-                    onClick={handleRemoveFromFavorites}
-                    className="p-2 rounded-lg bg-gradient-from/20 hover:bg-red-500/20 transition-all duration-300 border border-primary-border hover:border-red-500/30"
-                    title="Удалить из избранного"
-                  >
-                    <Trash2 className="w-5 h-5 text-secondary-light hover:text-red-400 transition-colors" />
-                  </button>
-                </div>
+          {/* Кнопка удаления */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleRemoveFromFavorites}
+            className="absolute top-3 right-3 p-2 rounded-full bg-black/60 backdrop-blur-sm text-red-400 hover:text-red-300 hover:bg-black/80 transition-colors duration-300 opacity-0 group-hover:opacity-100"
+            title="Удалить из избранного"
+            disabled={isRemoving}
+          >
+            <Trash2 className="w-4 h-4" />
+          </motion.button>
 
-                {/* Название и описание */}
-                <h3
-                  onClick={handleClick}
-                  className="text-lg font-medium text-white hover:text-blue-400 transition-colors duration-300 mb-2 cursor-pointer line-clamp-2"
-                >
-                  {product.title}
-                </h3>
-                {product.description && (
-                  <p className="text-sm text-secondary-light line-clamp-2 mb-4">
-                    {product.description}
-                  </p>
-                )}
-              </div>
+          {/* Метка категории - удалена для отображения только при наведении */}
+        </div>
 
-              {/* Цена и характеристики */}
-              <div className="mt-auto">
-                {product.characteristics &&
-                  product.characteristics.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                      {product.characteristics
-                        .slice(0, 4)
-                        .map((char, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <span className="text-secondary-light">
-                              {char.type}:
-                            </span>
-                            <span className="text-white">{char.value}</span>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                <div className="flex items-center justify-between pt-3 border-t border-primary-border">
-                  <span className="text-2xl font-semibold text-white">
-                    {product.price.toLocaleString()} ₽
-                  </span>
-                  <button
-                    onClick={handleClick}
-                    className="px-4 py-2 rounded-lg bg-gradient-from/20 hover:bg-gradient-from/30 text-secondary-light hover:text-white transition-all duration-300 border border-primary-border text-sm"
-                  >
-                    Подробнее
-                  </button>
-                </div>
-              </div>
+        {/* Информация о товаре */}
+        <div className="p-4 space-y-3">
+          <h3 className="text-white font-medium line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors duration-300">
+            {product.title}
+          </h3>
+
+          {product.brand && (
+            <div className="text-sm text-secondary-light/80">
+              {product.brand}
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-primary-border/30">
+            <div className="text-xs text-secondary-light mb-1">Цена:</div>
+            <div className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors">
+              {product.price.toLocaleString()} ₽
             </div>
           </div>
         </div>
@@ -161,7 +166,7 @@ export default function ProductCard({ product, onRemove }: ProductCardProps) {
 
       <Notification
         type="error"
-        message="Удалено из избранного"
+        message="Товар удален из избранного"
         isVisible={showNotification}
         onClose={() => setShowNotification(false)}
       />

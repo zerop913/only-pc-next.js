@@ -1,140 +1,173 @@
-"use client";
-
+import { useEffect, useState } from "react";
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
-import { Heart, AlertTriangle, ShoppingCart, ChevronDown } from "lucide-react";
-import ProductCard from "./ProductCard";
-import { FavoriteItem } from "@/types/favorite";
-import LoadingState from "@/components/common/LoadingState";
-import { useState } from "react";
+import { FavoriteProduct } from "@/types/favorite";
 import FavoriteCategory from "./FavoriteCategory";
-import Notification from "@/components/common/Notification/Notification";
+import { motion } from "framer-motion";
+import { HeartIcon } from "@heroicons/react/24/outline";
+import { Heart } from "lucide-react";
+import Link from "next/link";
 
 export default function FavoritesPage() {
-  const { isInitialized } = useAuth();
   const { favorites, isLoading } = useFavorites();
-  const { user } = useAuth();
-  const [collapsedCategories, setCollapsedCategories] = useState<{
-    [key: string]: boolean;
+  const [groupedFavorites, setGroupedFavorites] = useState<{
+    [key: string]: FavoriteProduct[];
   }>({});
-  const [showNotification, setShowNotification] = useState(false);
+  const [totalFavorites, setTotalFavorites] = useState(0);
 
-  const toggleCategory = (categoryId: string) => {
-    setCollapsedCategories((prev) => ({
-      ...prev,
-      [categoryId]: !prev[categoryId],
-    }));
-  };
+  useEffect(() => {
+    console.log("Favorites data:", favorites);
 
-  const handleItemRemove = () => {
-    setShowNotification(true);
-    setTimeout(() => setShowNotification(false), 2000);
-  };
+    // Проверяем, что favorites является объектом с ключами и значениями
+    if (
+      favorites &&
+      typeof favorites === "object" &&
+      !Array.isArray(favorites)
+    ) {
+      // Если структура данных соответствует { categoryId: [favorites] }
+      try {
+        const mapped = Object.entries(favorites).reduce(
+          (acc, [categoryId, items]) => {
+            if (Array.isArray(items) && items.length > 0) {
+              // Получаем имя категории из первого товара (если есть)
+              const categoryName =
+                items[0]?.product?.category?.name || `Категория ${categoryId}`;
+              acc[categoryName] = items;
+            }
+            return acc;
+          },
+          {} as Record<string, FavoriteProduct[]>
+        );
 
-  // Добавляем общую проверку инициализации
-  if (!isInitialized) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+        setGroupedFavorites(mapped);
+
+        // Считаем общее количество товаров
+        const total = Object.values(favorites).reduce(
+          (count, items) => count + (Array.isArray(items) ? items.length : 0),
+          0
+        );
+        setTotalFavorites(total);
+      } catch (error) {
+        console.error("Error processing favorites:", error);
+        setGroupedFavorites({});
+        setTotalFavorites(0);
+      }
+    } else if (Array.isArray(favorites)) {
+      // Если favorites - это массив (на случай, если формат API изменится)
+      try {
+        const grouped = favorites.reduce((acc, item) => {
+          const categoryName = item.product?.category?.name || "Другое";
+          if (!acc[categoryName]) {
+            acc[categoryName] = [];
+          }
+          acc[categoryName].push(item);
+          return acc;
+        }, {} as Record<string, FavoriteProduct[]>);
+
+        setGroupedFavorites(grouped);
+        setTotalFavorites(favorites.length);
+      } catch (error) {
+        console.error("Error grouping favorites array:", error);
+        setGroupedFavorites({});
+        setTotalFavorites(0);
+      }
+    } else {
+      console.error("Favorites is neither object nor array:", favorites);
+      setGroupedFavorites({});
+      setTotalFavorites(0);
+    }
+  }, [favorites]);
+
+  // Проверка наличия товаров в избранном
+  const hasFavorites = totalFavorites > 0;
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center py-12 min-h-[300px]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full border-4 border-t-blue-400 border-primary-border animate-spin mb-4"></div>
+          <p className="text-secondary-light">Загрузка избранного...</p>
+        </div>
       </div>
     );
   }
 
-  const totalItems = Object.values(favorites).flat().length;
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="bg-primary rounded-xl p-6 border border-primary-border">
-        {/* Header section */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
-            <Heart className="w-6 h-6 text-blue-400" />
+    <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-primary rounded-xl p-6 border border-primary-border shadow-xl">
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-gradient-from/20 rounded-lg border border-primary-border">
+                <Heart className="w-5 h-5 text-red-400" />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                Избранное
+              </h1>
+            </div>
+            <div className="text-sm px-3 py-1.5 bg-gradient-from/10 rounded-lg border border-primary-border text-secondary-light">
+              {hasFavorites
+                ? `${totalFavorites} ${
+                    totalFavorites === 1
+                      ? "товар"
+                      : totalFavorites < 5
+                      ? "товара"
+                      : "товаров"
+                  }`
+                : "Нет товаров"}
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Избранные товары</h1>
-            <p className="text-secondary-light mt-1">
-              {totalItems} {totalItems === 1 ? "товар" : "товаров"} в списке
+
+          <div className="py-3 px-4 bg-gradient-from/10 border border-primary-border rounded-lg flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-from/20 flex items-center justify-center">
+              <HeartIcon className="w-5 h-5 text-red-400" />
+            </div>
+            <p className="text-secondary-light text-sm">
+              Здесь отображаются все товары, которые вы добавили в избранное. Вы
+              можете быстро перейти к ним или удалить из списка.
             </p>
           </div>
         </div>
 
-        {!user && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-500/30"
-          >
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="text-white font-medium mb-1">
-                  Сохраните ваши избранные товары!
-                </h3>
-                <p className="text-secondary-light text-sm">
-                  Войдите в аккаунт, чтобы ваш список избранного сохранился и
-                  был доступен с любого устройства.
-                </p>
+        {hasFavorites ? (
+          <div className="space-y-8">
+            {Object.keys(groupedFavorites).length > 0 ? (
+              Object.entries(groupedFavorites).map(([categoryName, items]) => (
+                <FavoriteCategory
+                  key={categoryName}
+                  name={categoryName}
+                  favoriteItems={items}
+                />
+              ))
+            ) : (
+              <div className="text-center py-8 text-secondary-light">
+                Ошибка группировки товаров. Пожалуйста, обновите страницу.
               </div>
-            </div>
-          </motion.div>
-        )}
-
-        {totalItems === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
-              <Heart className="w-10 h-10 text-secondary-light" />
-            </div>
-            <h2 className="text-xl text-white mb-2">Список избранного пуст</h2>
-            <p className="text-secondary-light text-center max-w-md">
-              Добавляйте товары в избранное, чтобы сохранить их и быстро найти
-              при следующем посещении
-            </p>
+            )}
           </div>
         ) : (
-          <div className="space-y-6">
-            <AnimatePresence mode="popLayout">
-              {Object.entries(favorites).map(([categoryId, products]) => {
-                if (!products.length) return null;
-                const categoryName =
-                  products[0]?.product?.category?.name || "Категория";
-
-                return (
-                  <motion.div
-                    key={`category-${categoryId}`}
-                    layout
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <FavoriteCategory
-                      categoryName={categoryName}
-                      products={products}
-                      onItemRemove={handleItemRemove}
-                    />
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-16 text-center"
+          >
+            <div className="w-16 h-16 bg-gradient-from/20 rounded-full flex items-center justify-center mb-4 border border-primary-border">
+              <HeartIcon className="w-8 h-8 text-secondary-light" />
+            </div>
+            <h3 className="text-xl font-medium text-white mb-2">
+              Список избранного пуст
+            </h3>
+            <p className="text-secondary-light mb-6 max-w-md">
+              Вы еще не добавили ни одного товара в избранное. Добавляйте
+              товары, которые вам понравились, чтобы быстро к ним вернуться.
+            </p>
+            <Link
+              href="/configurator"
+              className="px-5 py-2.5 bg-gradient-from/20 hover:bg-gradient-from/30 transition-all duration-300 rounded-lg border border-primary-border text-white"
+            >
+              Перейти в каталог
+            </Link>
+          </motion.div>
         )}
-
-        {/* Уведомление на уровне страницы */}
-        <Notification
-          type="error"
-          message="Товар удален из избранного"
-          isVisible={showNotification}
-          onClose={() => setShowNotification(false)}
-        />
       </div>
     </div>
   );

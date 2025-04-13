@@ -1,240 +1,301 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { PcBuildResponse } from "@/types/pcbuild";
-import { Product } from "@/types/product";
 import { Category } from "@/types/category";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { ChartBarIcon, ClockIcon, UserIcon } from "@heroicons/react/24/outline";
-import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Search, SlidersHorizontal, Star } from "lucide-react";
+import BuildCard from "@/components/catalog/BuildCard";
+import Select from "@/components/common/ui/Select";
+import { useDebounce } from "@/hooks/useDebounce";
 
-const getPriorityComponents = (components: Record<string, string>) => {
-  return Object.entries(components)
-    .sort((a, b) => {
-      const orderA = CATEGORY_PRIORITIES[a[0] as CategorySlug] || 999;
-      const orderB = CATEGORY_PRIORITIES[b[0] as CategorySlug] || 999;
-      return orderA - orderB;
-    })
-    .map(([category, slug]) => ({ category, slug }));
-};
-
-const getUserName = (build: PcBuildResponse) => {
-  if (!build.user?.profile) return "Пользователь";
-  const { firstName, lastName } = build.user.profile;
-  if (firstName && lastName) return `${firstName} ${lastName}`;
-  if (firstName) return firstName;
-  if (lastName) return lastName;
-  return build.user.email.split("@")[0];
-};
+type SortOption = "newest" | "price-asc" | "price-desc";
 
 export default function CatalogPage() {
   const [builds, setBuilds] = useState<PcBuildResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
-  const [productsCache, setProductsCache] = useState<Record<string, string>>(
-    {}
-  );
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const debouncedSearch = useDebounce(search, 400);
+
+  const sortOptions = [
+    { value: "newest", label: "Сначала новые" },
+    { value: "price-asc", label: "Сначала недорогие" },
+    { value: "price-desc", label: "Сначала дорогие" },
+  ];
+
+  const filteredBuilds = useMemo(() => {
+    return builds
+      .filter((build) =>
+        build.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+      .sort((a, b) => {
+        if (sortBy === "newest") {
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        } else if (sortBy === "price-asc") {
+          return Number(a.totalPrice) - Number(b.totalPrice);
+        } else {
+          return Number(b.totalPrice) - Number(a.totalPrice);
+        }
+      });
+  }, [builds, debouncedSearch, sortBy]);
 
   useEffect(() => {
-    const fetchBuilds = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/builds");
-        const data = await response.json();
-        setBuilds(data.builds || []);
+        const [buildsResponse, categoriesResponse] = await Promise.all([
+          fetch("/api/builds"),
+          fetch("/api/categories"),
+        ]);
+
+        const buildsData = await buildsResponse.json();
+        const categoriesData = await categoriesResponse.json();
+
+        setBuilds(buildsData.builds || []);
+        setCategories(categoriesData || []);
       } catch (error) {
-        console.error("Error fetching builds:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
+        setTimeout(() => setIsInitialLoad(false), 100);
       }
     };
 
-    fetchBuilds();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch("/api/categories");
-        const data = await response.json();
-        setCategories(data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
+  const handleSortChange = (value: string | number) => {
+    setSortBy(value as SortOption);
+  };
 
-    fetchCategories();
-  }, []);
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
+    },
+  };
 
-  useEffect(() => {
-    const fetchProductsInfo = async () => {
-      const productMap = new Map<string, string>();
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
 
-      for (const build of builds) {
-        const components =
-          typeof build.components === "string"
-            ? JSON.parse(build.components)
-            : build.components;
-
-        for (const [categorySlug, productSlug] of Object.entries(components)) {
-          if (!productMap.has(productSlug as string)) {
-            try {
-              const response = await fetch(
-                `/api/products/${categorySlug}/${productSlug}-p-${productSlug}`
-              );
-              if (!response.ok) throw new Error("Product not found");
-
-              const data = await response.json();
-              if (data && data.title) {
-                productMap.set(productSlug as string, data.title);
-              }
-            } catch (error) {
-              console.error(`Error fetching product ${productSlug}:`, error);
-              productMap.set(productSlug as string, "Товар не найден");
-            }
-          }
-        }
-      }
-
-      setProductsCache(Object.fromEntries(productMap));
-    };
-
-    if (builds.length > 0) {
-      fetchProductsInfo();
-    }
+  const featuredBuilds = useMemo(() => {
+    return builds
+      .filter((build) => Number(build.totalPrice) > 50000)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
   }, [builds]);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-primary rounded-xl p-6 border border-primary-border">
-        <div className="flex items-center justify-between mb-8">
+      <div className="bg-primary rounded-xl p-4 sm:p-6 border border-primary-border">
+        {/* Рекомендованные сборки */}
+        {!isLoading && featuredBuilds.length > 0 && !debouncedSearch && (
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <h2 className="text-lg font-medium text-white">
+                Рекомендуемые сборки
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {featuredBuilds.map((build) => (
+                <BuildCard
+                  key={`featured-${build.id}`}
+                  build={build}
+                  categories={categories}
+                />
+              ))}
+            </div>
+            <div className="h-px bg-gradient-to-r from-transparent via-primary-border/30 to-transparent mt-8" />
+          </motion.div>
+        )}
+
+        <motion.div
+          className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
-            <h1 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-2xl font-bold text-white mb-1">
               Каталог готовых сборок
             </h1>
             <p className="text-secondary-light">
-              {builds.length} {builds.length === 1 ? "сборка" : "сборок"} в
-              каталоге
+              {filteredBuilds.length}{" "}
+              {filteredBuilds.length === 1
+                ? "сборка"
+                : filteredBuilds.length > 1 && filteredBuilds.length < 5
+                ? "сборки"
+                : "сборок"}{" "}
+              в каталоге
             </p>
           </div>
 
-          {isAuthenticated && (
-            <Link
-              href="/configurator"
-              className="px-4 py-2 rounded-lg bg-gradient-from/20 
-                       hover:bg-gradient-from/30 text-secondary-light 
-                       hover:text-white transition-all duration-300 
-                       border border-primary-border text-sm"
-            >
-              Создать сборку
-            </Link>
-          )}
-        </div>
+          <div className="flex gap-3 w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-none lg:w-64">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск сборок..."
+                className="w-full px-4 py-2.5 pl-10 bg-gradient-from/10 border border-primary-border rounded-lg 
+                           text-white placeholder:text-secondary-light/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+              />
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-secondary-light/70" />
+            </div>
 
-        {builds.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-secondary-light">Сборки не найдены</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {builds.map((build) => (
-              <Link key={build.id} href={`/catalog/${build.slug}`}>
-                <div
-                  className="group relative bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden
-                             transition-all duration-300 hover:bg-gradient-from/20 hover:border-blue-500/30"
-                >
-                  <div
-                    className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 
-                                opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  />
+            <div className="w-52">
+              <Select
+                value={sortBy}
+                onChange={handleSortChange}
+                options={sortOptions}
+                placeholder="Сортировка"
+              />
+            </div>
 
-                  <div className="p-5 border-b border-primary-border/30">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-medium text-white line-clamp-1 group-hover:text-blue-400 transition-colors">
-                        {build.name}
-                      </h3>
-                      <span className="flex-shrink-0 px-2 py-0.5 bg-gradient-from/30 rounded-full text-sm text-secondary-light border border-primary-border/50">
-                        #{build.id}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <UserIcon className="w-4 h-4 text-blue-400" />
-                        <span className="text-secondary-light group-hover:text-white transition-colors">
-                          {getUserName(build)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-secondary-light">
-                        <ClockIcon className="w-4 h-4 text-blue-400" />
-                        <span>
-                          {new Date(build.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-5">
-                    <div className="mb-4 space-y-2">
-                      {getPriorityComponents(build.components)
-                        .slice(0, 3)
-                        .map(({ category, slug }) => (
-                          <div
-                            key={`${category}-${slug}`}
-                            className="flex items-center gap-2.5 text-sm text-secondary-light"
-                          >
-                            <div className="w-6 h-6 rounded-md bg-gradient-from/30 p-1 flex-shrink-0">
-                              <img
-                                src={`/${
-                                  categories.find((c) => c.slug === category)
-                                    ?.icon || ""
-                                }`}
-                                alt=""
-                                className="w-full h-full opacity-70 group-hover:opacity-100 transition-opacity"
-                              />
-                            </div>
-                            <span className="truncate group-hover:text-white transition-colors">
-                              {productsCache[slug as string] || "Загрузка..."}
-                            </span>
-                          </div>
-                        ))}
-                      {Object.keys(build.components).length > 3 && (
-                        <div className="text-sm text-blue-400 pl-8">
-                          и ещё {Object.keys(build.components).length - 3}...
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-primary-border/30">
-                      <div>
-                        <div className="text-sm text-secondary-light">
-                          Стоимость
-                        </div>
-                        <div className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors">
-                          {Number(build.totalPrice).toLocaleString()} ₽
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <ChartBarIcon className="w-4 h-4 text-blue-400" />
-                        <span className="text-secondary-light">
-                          {Object.keys(build.components).length} компонентов
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {isAuthenticated && (
+              <Link
+                href="/configurator"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500/10 
+                           hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 
+                           transition-all duration-300 border border-blue-500/30 whitespace-nowrap"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">Создать сборку</span>
               </Link>
-            ))}
+            )}
           </div>
-        )}
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={
+              isLoading
+                ? "loading"
+                : filteredBuilds.length === 0
+                ? "empty"
+                : "content"
+            }
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    className="animate-pulse bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden"
+                  >
+                    <div className="aspect-[16/10] bg-gradient-from/20 rounded-t-lg" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-5 bg-gradient-from/20 rounded w-3/4" />
+                      <div className="h-4 bg-gradient-from/20 rounded w-1/2" />
+                      <div className="h-px bg-gradient-from/10 my-3" />
+                      <div className="flex justify-between">
+                        <div className="h-4 bg-gradient-from/20 rounded w-1/3" />
+                        <div className="h-4 bg-gradient-from/20 rounded w-1/4" />
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : filteredBuilds.length === 0 ? (
+              <motion.div
+                className="text-center py-16"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <motion.div
+                  className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-full 
+                            bg-gradient-from/20 text-secondary-light/50 border border-primary-border/50"
+                  initial={{ y: 10 }}
+                  animate={{ y: [10, -10, 10] }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    ease: "easeInOut",
+                  }}
+                >
+                  <SlidersHorizontal className="w-10 h-10" />
+                </motion.div>
+                <h3 className="text-xl font-medium text-white mb-3">
+                  {debouncedSearch
+                    ? "Не найдено подходящих сборок"
+                    : "В каталоге пока нет сборок"}
+                </h3>
+                <p className="text-secondary-light max-w-md mx-auto">
+                  {debouncedSearch
+                    ? "Попробуйте изменить запрос поиска или сбросить фильтры"
+                    : "Станьте первым, кто поделится своей конфигурацией ПК"}
+                </p>
+
+                {isAuthenticated && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <Link
+                      href="/configurator"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-500/10 
+                                 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 
+                                 transition-all duration-300 border border-blue-500/30 mt-6"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Создать первую сборку</span>
+                    </Link>
+                  </motion.div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                key={`${debouncedSearch}-${sortBy}`}
+              >
+                <AnimatePresence mode="wait">
+                  {filteredBuilds.map((build) => (
+                    <motion.div
+                      key={build.id}
+                      variants={itemVariants}
+                      layout
+                      exit={{ opacity: 0, scale: 0.95 }}
+                    >
+                      <BuildCard build={build} categories={categories} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
