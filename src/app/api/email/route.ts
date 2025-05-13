@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { redis } from "@/lib/redis";
+import emailTemplate from "@/lib/utils/emailTemplate";
+
+// Инициализация Resend API
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Функция для генерации кода верификации
 function generateVerificationCode(): string {
@@ -16,82 +20,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email не указан" }, { status: 400 });
     }
 
-    // Создаем транспорт для отправки почты
-    const transporter = nodemailer.createTransport({
-      host: "smtp.mail.ru",
-      port: 465,
-      secure: true,
-      auth: {
-        user: "onlypc.contact@mail.ru",
-        pass: process.env.EMAIL_PASSWORD,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
     // Генерируем и сохраняем код
     const code = generateVerificationCode();
-    await redis.set(`email_verification:${email}`, code, "EX", 600);
-
-    // Отправляем письмо
-    await transporter.sendMail({
-      from: "onlypc.contact@mail.ru",
+    // Код действителен 5 минут
+    await redis.set(`email_verification:${email}`, code, "EX", 300); // Получаем HTML шаблон с кодом из внешнего файла
+    const htmlContent = emailTemplate(code); // Отправляем письмо с использованием Resend
+    const { data, error } = await resend.emails.send({
+      from: "OnlyPC <noreply@only-pc.ru>", // Замените only-pc.ru на ваш реальный домен
+      replyTo: process.env.MAIL_REPLY_TO || "contact@only-pc.ru", // Опционально: замените на адрес для ответов
       to: email,
       subject: "Код подтверждения входа в OnlyPC",
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <style>
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-            </style>
-          </head>
-          <body style="margin: 0; padding: 20px; background-color: #1a1b23; font-family: Arial, sans-serif;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
-              <tr>
-                <td>
-                  <div style="text-align: center; padding: 20px 0;">
-                    <h1 style="color: #3b82f6; font-size: 28px; margin: 0;">OnlyPC</h1>
-                    <p style="color: #ffffff; margin-top: 10px;">Подтверждение входа</p>
-                  </div>
-                  
-                  <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 30px; margin: 20px 0;">
-                    <div style="text-align: center;">
-                      <p style="color: #ffffff; margin-bottom: 20px;">Ваш код подтверждения:</p>
-                      <div style="background-color: rgba(26, 27, 35, 0.8); border-radius: 8px; padding: 20px; margin: 20px 0;">
-                        <span style="color: #3b82f6; font-size: 32px; font-weight: bold; letter-spacing: 8px;">${code}</span>
-                      </div>
-                      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px;">Код действителен в течение 10 минут</p>
-                    </div>
-                  </div>
-                  
-                  <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(59, 130, 246, 0.2);">
-                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 13px; margin-bottom: 10px;">
-                      Если вы не запрашивали этот код, просто проигнорируйте это письмо.
-                    </p>
-                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 12px;">
-                      © ${new Date().getFullYear()} OnlyPC. Все права защищены.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </body>
-        </html>
-      `,
+      html: htmlContent,
     });
+
+    if (error) {
+      console.error("Ошибка отправки кода через Resend:", error);
+      throw new Error(`Ошибка отправки кода: ${error.message}`);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Ошибка отправки кода:", error);
     return NextResponse.json(
-      { error: `Ошибка отправки кода: ${error.message}` },
+      {
+        error: `Ошибка отправки кода: ${error.message || "Неизвестная ошибка"}`,
+      },
       { status: 500 }
     );
   }

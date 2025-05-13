@@ -109,37 +109,47 @@ const BuildCarousel: React.FC<BuildCarouselProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Карусель изображений */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="absolute inset-0 flex items-center justify-center p-4"
-        >
-          {images[currentIndex]?.image ? (
-            <div className="relative w-full h-full">
-              <Image
-                src={images[currentIndex].image}
-                alt={images[currentIndex].title || "Компонент"}
-                fill
-                sizes="(max-width: 768px) 100vw, 400px"
-                className="object-contain transition-transform duration-300 hover:scale-105"
-                priority={currentIndex === 0}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <Package className="w-10 h-10 text-secondary-light/30 mb-2" />
-              <span className="text-xs text-secondary-light/70">
-                Нет изображения
-              </span>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+      {/* Карусель изображений с улучшенным эффектом перехода */}
+      <div className="absolute inset-0">
+        {images.map((image, index) => (
+          <AnimatePresence key={index} initial={false}>
+            {index === currentIndex && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="absolute inset-0 flex items-center justify-center p-4"
+              >
+                {image?.image ? (
+                  <motion.div
+                    className="relative w-full h-full"
+                    initial={{ scale: 1.05 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                  >
+                    <Image
+                      src={image.image}
+                      alt={image.title || "Компонент"}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      className="object-contain transition-transform duration-300 hover:scale-105"
+                      priority={index === 0}
+                    />
+                  </motion.div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <Package className="w-10 h-10 text-secondary-light/30 mb-2" />
+                    <span className="text-xs text-secondary-light/70">
+                      Нет изображения
+                    </span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        ))}
+      </div>
 
       {/* Миниатюрная метка категории */}
       {images[currentIndex]?.categoryIcon && (

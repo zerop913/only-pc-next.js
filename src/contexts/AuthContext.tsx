@@ -17,6 +17,7 @@ export interface User {
   email: string;
   roleId: number;
   isAdmin?: boolean;
+  isManager?: boolean;
 }
 
 // Определяем типы для результатов операций
@@ -69,11 +70,17 @@ export const AuthProvider: React.FC<{
         if (data.authenticated && data.user) {
           setIsAuthenticated(true);
           const isAdmin = data.user.roleId === 1;
+          const isManager = data.user.roleId === 3;
           setUser({
             ...data.user,
             isAdmin,
+            isManager,
           });
-          console.log("Auth check successful:", { ...data.user, isAdmin });
+          console.log("Auth check successful:", {
+            ...data.user,
+            isAdmin,
+            isManager,
+          });
         } else {
           setIsAuthenticated(false);
           setUser(null);

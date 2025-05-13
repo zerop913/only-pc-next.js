@@ -1,17 +1,21 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   QuestionMarkCircleIcon,
   XMarkIcon,
   ChartBarIcon,
   CheckIcon,
+  CheckBadgeIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import CategoryGuide from "./CategoryGuide";
 import TotalPrice from "../../TotalPrice/TotalPrice";
 import { useConfigurator } from "@/contexts/ConfiguratorContext";
 import { useModal } from "@/contexts/ModalContext";
+import { Tooltip } from "@/components/common/Tooltip";
+import { CompatibilityEdge } from "@/types/compatibility";
 
 interface ConfiguratorHeaderProps {
   editingBuildName?: string | null;
@@ -30,7 +34,122 @@ const ConfiguratorHeader = ({
     getProgress,
     isLoading,
     isConfigurationComplete,
+    openCompatibilityCheckModal,
   } = useConfigurator();
+
+  // Состояние для хранения результатов совместимости
+  const [compatibilityPercentage, setCompatibilityPercentage] = useState(100);
+  const [incompatibleCount, setIncompatibleCount] = useState(0);
+  const [isCompatible, setIsCompatible] = useState(true);
+  const [tooltipText, setTooltipText] = useState("");
+
+  // Обновляем информацию о совместимости при изменении выбранных продуктов
+  useEffect(() => {
+    if (selectedProducts.length < 2) {
+      // Если выбрано меньше 2 продуктов, считаем что все совместимо
+      setCompatibilityPercentage(100);
+      setIncompatibleCount(0);
+      setIsCompatible(true);
+      setTooltipText("Выберите больше компонентов для проверки совместимости");
+      return;
+    }
+
+    // Делаем запрос к API для проверки совместимости
+    const checkCompatibility = async () => {
+      try {
+        // Подготавливаем данные для запроса
+        const componentsData = selectedProducts
+          .map((item) => ({
+            categorySlug:
+              categories.find((c) => c.id === item.categoryId)?.slug || "",
+            productSlug: item.product.slug,
+          }))
+          .filter((item) => item.categorySlug !== "");
+
+        // Если нет данных для проверки, выходим
+        if (componentsData.length < 2) return;
+
+        // Отправляем запрос
+        const response = await fetch("/api/compatibility/check", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ components: componentsData }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // Получаем количество несовместимых пар
+          const incompatiblePairs =
+            data.componentPairs?.filter(
+              (pair: CompatibilityEdge) => !pair.compatible
+            ) || [];
+
+          const totalIssues = incompatiblePairs.length;
+
+          // Рассчитываем процент совместимости
+          // Максимальное количество пар: n*(n-1)/2, где n - количество компонентов
+          const maxPairs =
+            (selectedProducts.length * (selectedProducts.length - 1)) / 2;
+          const compatPercentage =
+            maxPairs > 0
+              ? Math.round(((maxPairs - totalIssues) / maxPairs) * 100)
+              : 100;
+
+          setCompatibilityPercentage(compatPercentage);
+          setIncompatibleCount(totalIssues);
+          setIsCompatible(data.compatible);
+
+          if (totalIssues > 0) {
+            setTooltipText(
+              `${totalIssues} ${getWordEnding(
+                totalIssues,
+                "несовместимость",
+                "несовместимости",
+                "несовместимостей"
+              )} между компонентами`
+            );
+          } else {
+            setTooltipText("Все компоненты совместимы");
+          }
+        }
+      } catch (error) {
+        console.error("Ошибка при проверке совместимости:", error);
+        setCompatibilityPercentage(100);
+        setIncompatibleCount(0);
+      }
+    };
+
+    // Запускаем проверку совместимости
+    checkCompatibility();
+  }, [selectedProducts, categories]);
+
+  // Вспомогательная функция для правильного окончания слов
+  const getWordEnding = (
+    count: number,
+    one: string,
+    few: string,
+    many: string
+  ): string => {
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+      return many;
+    }
+
+    if (lastDigit === 1) {
+      return one;
+    }
+
+    if (lastDigit >= 2 && lastDigit <= 4) {
+      return few;
+    }
+
+    return many;
+  };
 
   const completedComponents = selectedProducts.length;
   const totalComponents = categories.length;
@@ -82,12 +201,41 @@ const ConfiguratorHeader = ({
               </span>
             </motion.button>
 
-            <motion.div className="flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light border border-primary-border cursor-pointer">
-              <span className="text-sm font-medium">
-                Совместимость:{" "}
-                <span className="text-green-400">{progress.toFixed(0)}%</span>
+            <Tooltip content={tooltipText} position="bottom">
+              <motion.div
+                className={`flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light border border-primary-border cursor-pointer relative ${
+                  !isCompatible
+                    ? "hover:bg-red-900/20"
+                    : "hover:bg-green-900/20"
+                }`}
+              >
+                {!isCompatible && (
+                  <ExclamationCircleIcon className="w-5 h-5 text-red-400" />
+                )}
+                <span className="text-sm font-medium">
+                  Совместимость:{" "}
+                  <span
+                    className={`${
+                      isCompatible ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
+                    {compatibilityPercentage}%
+                  </span>
+                </span>
+              </motion.div>
+            </Tooltip>
+
+            {/* Кнопка проверки совместимости */}
+            <motion.button
+              onClick={openCompatibilityCheckModal}
+              className="flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border"
+              whileTap={{ scale: 0.98 }}
+            >
+              <CheckBadgeIcon className="w-5 h-5 group-hover:text-white transition-colors duration-300" />
+              <span className="text-sm font-medium group-hover:text-white transition-colors duration-300">
+                Проверка
               </span>
-            </motion.div>
+            </motion.button>
           </div>
           <div className="mt-2 md:hidden w-full">
             <CategoryGuide />

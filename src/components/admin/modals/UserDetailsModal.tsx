@@ -60,6 +60,47 @@ export default function UserDetailsModal({
     }).format(dateObj);
   };
 
+  // Функция для расчета количества дней неактивности
+  const calculateInactiveDays = (): {
+    days: number;
+    isNearDeactivation: boolean;
+  } => {
+    if (!user.lastLoginAt || isOnline) {
+      return { days: 0, isNearDeactivation: false };
+    }
+
+    const lastLogin = new Date(user.lastLoginAt);
+    const now = new Date();
+
+    const differenceInTime = now.getTime() - lastLogin.getTime();
+    const differenceInDays = Math.floor(differenceInTime / (1000 * 3600 * 24));
+
+    // Проверяем, приближается ли пользователь к порогу деактивации (90 дней)
+    const isNearDeactivation = differenceInDays >= 60 && differenceInDays < 90;
+
+    return { days: differenceInDays, isNearDeactivation };
+  };
+
+  const { days: inactiveDays, isNearDeactivation } = calculateInactiveDays();
+
+  // Функция для склонения существительного "день" в зависимости от числа
+  const formatDaysText = (days: number): string => {
+    if (days === 0) return "менее 1 дня";
+
+    const lastDigit = days % 10;
+    const lastTwoDigits = days % 100;
+
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+      return `${days} дней`;
+    } else if (lastDigit === 1) {
+      return `${days} день`;
+    } else if (lastDigit >= 2 && lastDigit <= 4) {
+      return `${days} дня`;
+    } else {
+      return `${days} дней`;
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -212,6 +253,40 @@ export default function UserDetailsModal({
                     </p>
                   )}
                 </div>
+
+                {/* Добавляем блок с информацией о неактивности */}
+                {!isOnline && user.lastLoginAt && (
+                  <div>
+                    <span className="text-sm text-secondary-light">
+                      Период неактивности
+                    </span>
+                    <div className="mt-1">
+                      {inactiveDays > 0 && (
+                        <div
+                          className={`flex items-center gap-2 ${
+                            isNearDeactivation ? "text-amber-400" : "text-white"
+                          }`}
+                        >
+                          {isNearDeactivation && (
+                            <AlertCircle className="w-4 h-4 text-amber-400" />
+                          )}
+                          <span>{formatDaysText(inactiveDays)}</span>
+                          {isNearDeactivation && (
+                            <span className="text-xs bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                              Приближается к деактивации
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {user.roleId !== 1 && (
+                        <p className="text-xs text-secondary-light mt-1">
+                          Автоматическая деактивация через {90 - inactiveDays}{" "}
+                          дней неактивности
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

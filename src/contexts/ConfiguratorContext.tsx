@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import { Product } from "@/types/product";
 import { Category } from "@/types/category";
+import CompatibilityCheckModal from "@/components/modals/configurator/CompatibilityCheckModal";
+import { CompatibilityResult } from "@/types/compatibility";
 
 export interface SelectedProduct {
   categoryId: number;
@@ -37,6 +39,13 @@ interface ConfiguratorContextType {
   getProgress: () => number;
   isConfigurationComplete: boolean;
   clearConfiguration: () => void;
+  isCompatibilityCheckModalOpen: boolean;
+  openCompatibilityCheckModal: () => void;
+  closeCompatibilityCheckModal: () => void;
+  selectedComponents: Record<string, string>;
+  setSelectedComponents: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
 }
 
 const ConfiguratorContext = createContext<ConfiguratorContextType | undefined>(
@@ -52,6 +61,29 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false);
+  const [isCompatibilityCheckModalOpen, setIsCompatibilityCheckModalOpen] =
+    useState(false);
+  const [selectedComponents, setSelectedComponents] = useState<
+    Record<string, string>
+  >({});
+  const [compatibilityResults, setCompatibilityResults] =
+    useState<CompatibilityResult | null>(null);
+
+  // Обновляем selectedComponents при изменении selectedProducts
+  useEffect(() => {
+    const componentsMap: Record<string, string> = {};
+
+    selectedProducts.forEach((item) => {
+      // Находим категорию продукта
+      const category = categories.find((c) => c.id === item.product.categoryId);
+      if (category && category.slug) {
+        componentsMap[category.slug] = item.product.slug;
+      }
+    });
+
+    console.log("Обновление selectedComponents:", componentsMap);
+    setSelectedComponents(componentsMap);
+  }, [selectedProducts, categories]);
 
   // Загрузка категорий при монтировании
   useEffect(() => {
@@ -250,6 +282,74 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem(CONFIG_STORAGE_KEY);
   }, []);
 
+  // Обработчики для модального окна проверки совместимости
+  const openCompatibilityCheckModal = useCallback(async () => {
+    console.log(
+      "Открытие модального окна проверки совместимости, выбранные компоненты:",
+      selectedComponents
+    );
+
+    // Более глубокая отладка для выявления проблемы
+    console.log(
+      "Формат selectedComponents:",
+      Object.entries(selectedComponents || {}).map(
+        ([categorySlug, productSlug]) => ({
+          categorySlug,
+          slug: productSlug,
+        })
+      )
+    );
+
+    try {
+      // Получаем результаты проверки совместимости
+      const response = await fetch("/api/compatibility/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          components: Object.entries(selectedComponents || {}).map(
+            ([categorySlug, productSlug]) => ({
+              categorySlug,
+              productSlug,
+            })
+          ),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompatibilityResults(data);
+        setIsCompatibilityCheckModalOpen(true);
+      } else {
+        console.error(
+          "Ошибка при проверке совместимости:",
+          response.statusText
+        );
+        // Создаем базовый результат при ошибке
+        setCompatibilityResults({
+          compatible: false,
+          issues: [],
+          componentPairs: [],
+        });
+        setIsCompatibilityCheckModalOpen(true);
+      }
+    } catch (error) {
+      console.error("Ошибка при проверке совместимости:", error);
+      // Создаем базовый результат при ошибке
+      setCompatibilityResults({
+        compatible: false,
+        issues: [],
+        componentPairs: [],
+      });
+      setIsCompatibilityCheckModalOpen(true);
+    }
+  }, [selectedComponents]);
+
+  const closeCompatibilityCheckModal = () => {
+    setIsCompatibilityCheckModalOpen(false);
+  };
+
   const value = {
     selectedProducts,
     categories,
@@ -262,11 +362,27 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
     getProgress,
     isConfigurationComplete,
     clearConfiguration,
+    isCompatibilityCheckModalOpen,
+    openCompatibilityCheckModal,
+    closeCompatibilityCheckModal,
+    selectedComponents,
+    setSelectedComponents,
   };
 
   return (
     <ConfiguratorContext.Provider value={value}>
       {children}
+      <CompatibilityCheckModal
+        isOpen={isCompatibilityCheckModalOpen}
+        onClose={closeCompatibilityCheckModal}
+        results={
+          compatibilityResults || {
+            compatible: true,
+            issues: [],
+            componentPairs: [],
+          }
+        }
+      />
     </ConfiguratorContext.Provider>
   );
 };

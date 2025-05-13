@@ -11,8 +11,16 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/common/ui/tabs";
-import { User, Shield, Settings, ShieldAlert, Package } from "lucide-react";
+import {
+  User,
+  Shield,
+  Settings,
+  ShieldAlert,
+  Package,
+  Briefcase,
+} from "lucide-react";
 import AdminTab from "./AdminTab";
+import ManagerTab from "./ManagerTab";
 import ProfileBuilds from "./ProfileBuilds";
 
 export default function ProfilePage() {
@@ -88,6 +96,12 @@ export default function ProfilePage() {
               <span className="whitespace-nowrap">Админ панель</span>
             </TabsTrigger>
           )}
+          {user.roleId === 3 && (
+            <TabsTrigger value="manager">
+              <Briefcase className="w-4 h-4 mr-2" />
+              <span className="whitespace-nowrap">Панель менеджера</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6 w-full">
@@ -126,6 +140,12 @@ export default function ProfilePage() {
         {user.roleId === 1 && (
           <TabsContent value="admin" className="space-y-6 w-full">
             <AdminTab />
+          </TabsContent>
+        )}
+
+        {user.roleId === 3 && (
+          <TabsContent value="manager" className="space-y-6 w-full">
+            <ManagerTab />
           </TabsContent>
         )}
       </Tabs>

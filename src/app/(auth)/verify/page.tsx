@@ -10,7 +10,7 @@ export default function VerifyPage() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -18,7 +18,32 @@ export default function VerifyPage() {
     const email = sessionStorage.getItem("verificationEmail");
     if (!email) {
       router.push("/login");
+      return;
     }
+
+    // Проверяем, есть ли сохраненное время окончания в sessionStorage
+    const endTime = sessionStorage.getItem("verificationEndTime");
+    let initialTimeLeft = 300; // 5 минут по умолчанию
+
+    if (endTime) {
+      const now = Math.floor(Date.now() / 1000); // текущее время в секундах
+      const end = parseInt(endTime, 10);
+      const remaining = end - now;
+
+      // Если таймер еще не истек, используем оставшееся время
+      if (remaining > 0) {
+        initialTimeLeft = remaining;
+      } else {
+        // Если таймер истек, удаляем его из хранилища
+        sessionStorage.removeItem("verificationEndTime");
+      }
+    } else {
+      // Если таймера нет, устанавливаем новый
+      const newEndTime = Math.floor(Date.now() / 1000) + initialTimeLeft;
+      sessionStorage.setItem("verificationEndTime", newEndTime.toString());
+    }
+
+    setTimeLeft(initialTimeLeft);
 
     // Запускаем таймер
     const timer = setInterval(() => {
@@ -192,6 +217,8 @@ export default function VerifyPage() {
         throw new Error("Ошибка отправки кода");
       }
 
+      const newEndTime = Math.floor(Date.now() / 1000) + 600;
+      sessionStorage.setItem("verificationEndTime", newEndTime.toString());
       setTimeLeft(600);
       setError(null);
     } catch (err) {
@@ -229,6 +256,7 @@ export default function VerifyPage() {
       // Очищаем sessionStorage и перенаправляем
       sessionStorage.removeItem("verificationEmail");
       sessionStorage.removeItem("loginData");
+      sessionStorage.removeItem("verificationEndTime");
       window.location.href = "/profile";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Произошла ошибка");

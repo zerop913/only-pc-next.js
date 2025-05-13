@@ -28,7 +28,7 @@ export const verifyCode = async (
   }
 };
 
-// Отправка кода подтверждения
+// Отправка кода подтверждения через SendGrid
 export const sendVerificationCode = async (
   email: string,
   origin?: string

@@ -22,34 +22,50 @@ body {
   display: flex;
 }
 
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
+::-webkit-scrollbar-track {
+  background: rgba(26, 27, 35, 0.5);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* Скроллбар для Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(26, 27, 35, 0.5);
+}
+
+/* Оставляем класс для компонентов, где нужен особый кастомный скроллбар */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(26, 27, 35, 0.5);
+  border-radius: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    to bottom,
-    rgba(59, 130, 246, 0.3),
-    rgba(168, 85, 247, 0.3)
-  );
-  border-radius: 3px;
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    to bottom,
-    rgba(59, 130, 246, 0.4),
-    rgba(168, 85, 247, 0.4)
-  );
+  background: rgba(59, 130, 246, 0.5);
 }
 
 /* Добавляем новый класс для скрытия скроллбара */

@@ -203,6 +203,106 @@ export const pcBuildsRelations = relations(pcBuilds, ({ one }) => ({
   }),
 }));
 
+// Таблица несовместимостей компонентов
+export const componentIncompatibility = pgTable("component_incompatibility", {
+  id: serial("id").primaryKey(),
+  component1_id: integer("component1_id")
+    .notNull()
+    .references(() => products.id),
+  component2_id: integer("component2_id")
+    .notNull()
+    .references(() => products.id),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Таблица правил совместимости
+export const compatibilityRules = pgTable("compatibility_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица категорий правил совместимости
+export const compatibilityRuleCategories = pgTable(
+  "compatibility_rule_categories",
+  {
+    id: serial("id").primaryKey(),
+    ruleId: integer("rule_id")
+      .references(() => compatibilityRules.id, { onDelete: "cascade" })
+      .notNull(),
+    primaryCategoryId: integer("primary_category_id")
+      .references(() => categories.id, { onDelete: "cascade" })
+      .notNull(),
+    secondaryCategoryId: integer("secondary_category_id")
+      .references(() => categories.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  }
+);
+
+// Таблица правил характеристик для совместимости
+export const compatibilityRuleCharacteristics = pgTable(
+  "compatibility_rule_characteristics",
+  {
+    id: serial("id").primaryKey(),
+    ruleId: integer("rule_id")
+      .references(() => compatibilityRules.id, { onDelete: "cascade" })
+      .notNull(),
+    primaryCharacteristicId: integer("primary_characteristic_id")
+      .references(() => characteristicsTypes.id, { onDelete: "cascade" })
+      .notNull(),
+    secondaryCharacteristicId: integer("secondary_characteristic_id")
+      .references(() => characteristicsTypes.id, { onDelete: "cascade" })
+      .notNull(),
+    comparisonType: varchar("comparison_type", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  }
+);
+
+// Таблица значений для проверки совместимости
+export const compatibilityValues = pgTable("compatibility_values", {
+  id: serial("id").primaryKey(),
+  ruleCharacteristicId: integer("rule_characteristic_id")
+    .references(() => compatibilityRuleCharacteristics.id, {
+      onDelete: "cascade",
+    })
+    .notNull(),
+  primaryValue: text("primary_value").notNull(),
+  secondaryValue: text("secondary_value").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица результатов проверки совместимости сборки
+export const compatibilityCheckResults = pgTable(
+  "compatibility_check_results",
+  {
+    id: serial("id").primaryKey(),
+    buildId: integer("build_id")
+      .notNull()
+      .references(() => pcBuilds.id),
+    isCompatible: boolean("is_compatible").default(true),
+    issues: text("issues"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  }
+);
+
+export const compatibilityCheckResultsRelations = relations(
+  compatibilityCheckResults,
+  ({ one }) => ({
+    build: one(pcBuilds, {
+      fields: [compatibilityCheckResults.buildId],
+      references: [pcBuilds.id],
+    }),
+  })
+);
+
 // Типы для использования в приложении
 export type Category = InferModel<typeof categories>;
 export type Product = InferModel<typeof products>;
@@ -212,6 +312,10 @@ export type Role = InferModel<typeof roles>;
 export type User = InferModel<typeof users>;
 export type UserProfile = InferModel<typeof userProfiles>;
 export type PcBuild = InferModel<typeof pcBuilds>;
+export type CompatibilityRule = InferModel<typeof compatibilityRules>;
+export type CompatibilityCheckResult = InferModel<
+  typeof compatibilityCheckResults
+>;
 
 // Типы для вставки
 export type NewCategory = InferModel<typeof categories, "insert">;
@@ -228,3 +332,11 @@ export type NewRole = InferModel<typeof roles, "insert">;
 export type NewUser = InferModel<typeof users, "insert">;
 export type NewUserProfile = InferModel<typeof userProfiles, "insert">;
 export type NewPcBuild = InferModel<typeof pcBuilds, "insert">;
+export type NewCompatibilityRule = InferModel<
+  typeof compatibilityRules,
+  "insert"
+>;
+export type NewCompatibilityCheckResult = InferModel<
+  typeof compatibilityCheckResults,
+  "insert"
+>;

@@ -13,17 +13,19 @@ interface BuildCardProps {
   categories: Category[];
 }
 
-const BuildCard: React.FC<BuildCardProps> = ({ build, categories }) => {
-  const [componentImages, setComponentImages] = useState<
-    Array<{
-      image: string | null;
-      categoryName: string;
-      categoryIcon?: string;
-      title: string;
-      categorySlug?: string;
-    }>
-  >([]);
+// Определяем общий интерфейс для компонента изображения
+interface ComponentImageType {
+  image: string | null;
+  categoryName: string;
+  categoryIcon: string | undefined;
+  title: string;
+  categorySlug: string;
+}
 
+const BuildCard: React.FC<BuildCardProps> = ({ build, categories }) => {
+  const [componentImages, setComponentImages] = useState<ComponentImageType[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -72,7 +74,12 @@ const BuildCard: React.FC<BuildCardProps> = ({ build, categories }) => {
           )
         );
 
-        setComponentImages(componentsData.filter(Boolean));
+        // Используем type guard для фильтрации и приведения типов
+        const filteredComponents: ComponentImageType[] = componentsData.filter(
+          (item): item is ComponentImageType => item !== null
+        );
+
+        setComponentImages(filteredComponents);
       } catch (error) {
         console.error("Error loading component images:", error);
       } finally {

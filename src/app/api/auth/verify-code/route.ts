@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 дней в секундах
       path: "/",
       sameSite: "strict",
     });

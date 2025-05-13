@@ -1,4 +1,3 @@
-// (переместить существующий код ConfigurationModal сюда)
 import { AnimatePresence, motion } from "framer-motion";
 import { XMarkIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Category } from "@/types/category";
@@ -18,8 +17,8 @@ interface ConfigurationModalProps {
   progress: number;
   isComplete: boolean;
   onClose: () => void;
-  editingBuildName?: string | null; // Обновляем тип, чтобы он мог принимать null
-  editingBuildSlug?: string | null; // Добавляем slug редактируемой сборки
+  editingBuildName?: string | null;
+  editingBuildSlug?: string | null;
 }
 
 export default function ConfigurationModal({
@@ -125,7 +124,7 @@ export default function ConfigurationModal({
           name,
           components,
           isEditing: !!editingBuildName,
-          buildSlug: editingBuildSlug, // Добавляем slug редактируемой сборки
+          buildSlug: editingBuildSlug,
         }),
         credentials: "include",
       });
@@ -154,6 +153,11 @@ export default function ConfigurationModal({
       initialName: editingBuildName || "",
       isEditing: !!editingBuildName,
     });
+  };
+
+  const handleNavigateToProduct = (product: Product, category: Category) => {
+    onClose();
+    router.push(getProductUrl(product, category));
   };
 
   return (
@@ -274,8 +278,9 @@ export default function ConfigurationModal({
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                router.push(
-                                  getProductUrl(selected.product, category)
+                                handleNavigateToProduct(
+                                  selected.product,
+                                  category
                                 );
                               }}
                               className="flex items-center justify-between sm:justify-end gap-3 cursor-pointer hover:opacity-80 transition-opacity pl-5"
@@ -462,9 +467,7 @@ export default function ConfigurationModal({
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(
-                              getProductUrl(selected.product, category)
-                            );
+                            handleNavigateToProduct(selected.product, category);
                           }}
                           className="flex items-center justify-between sm:justify-end gap-3 cursor-pointer hover:opacity-80 transition-opacity pl-5"
                         >

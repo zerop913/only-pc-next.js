@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
   // Маршруты, доступные только для неавторизованных пользователей
   const publicAuthPaths = ["/login", "/register"];
   // Маршруты, требующие авторизации
-  const protectedPaths = ["/profile", "/admin"];
+  const protectedPaths = ["/profile", "/admin", "/manager"];
   // Добавляем маршрут /logout для обработки
   const specialPaths = ["/logout"];
 
@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Обновляем обработку админ-маршрутов
+  // Обработка админ-маршрутов
   if (path.startsWith("/admin")) {
     try {
       if (!token) {
@@ -98,6 +98,36 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Обработка маршрутов менеджера
+  if (path.startsWith("/manager")) {
+    try {
+      if (!token) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+
+      const secret = new TextEncoder().encode(
+        process.env.JWT_SECRET || "default_secret"
+      );
+      const { payload } = await jwtVerify(token, secret);
+
+      // Проверяем роль менеджера
+      if ((payload as any).roleId !== 3) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+
+      // Проверяем наличие manager_access cookie для защищенных маршрутов
+      const managerAccess = request.cookies.get("manager_access")?.value;
+      if (!managerAccess && path !== "/manager/verify") {
+        return NextResponse.redirect(new URL("/profile", request.url));
+      }
+
+      return NextResponse.next();
+    } catch (error) {
+      console.error("Manager middleware error:", error);
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
@@ -109,5 +139,6 @@ export const config = {
     "/logout",
     "/profile/:path*",
     "/admin/:path*",
+    "/manager/:path*",
   ],
 };

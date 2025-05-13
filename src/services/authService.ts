@@ -84,7 +84,7 @@ type TokenUser = {
 
 // Функция для создания токена авторизации
 export function generateAuthToken(user: TokenUser) {
-  const tokenExpiration = 24 * 60 * 60; // 24 часа в секундах
+  const tokenExpiration = 7 * 24 * 60 * 60; // 7 дней в секундах
   return jwt.sign(
     {
       userId: user.id,
