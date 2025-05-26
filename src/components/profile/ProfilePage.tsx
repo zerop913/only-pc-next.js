@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "next/navigation";
 import ProfileInfo from "./ProfileInfo";
 import ProfileEditForm from "./ProfileEditForm";
 import ProfileSecurity from "./ProfileSecurity";
+import ProfileOrders from "./ProfileOrders";
 import {
   Tabs,
   TabsContent,
@@ -18,6 +20,7 @@ import {
   ShieldAlert,
   Package,
   Briefcase,
+  ShoppingBag,
 } from "lucide-react";
 import AdminTab from "./AdminTab";
 import ManagerTab from "./ManagerTab";
@@ -25,6 +28,8 @@ import ProfileBuilds from "./ProfileBuilds";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams ? searchParams.get("tab") : null;
   const [activeTab, setActiveTab] = useState("profile");
   const [mounted, setMounted] = useState(false);
   const [profileUpdated, setProfileUpdated] = useState(0);
@@ -33,6 +38,24 @@ export default function ProfilePage() {
   const handleProfileUpdate = () => {
     setProfileUpdated((prev) => prev + 1);
   };
+
+  // Устанавливаем активную вкладку из URL-параметра
+  useEffect(() => {
+    if (
+      tabParam &&
+      [
+        "profile",
+        "orders",
+        "builds",
+        "security",
+        "settings",
+        "admin",
+        "manager",
+      ].includes(tabParam)
+    ) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   // Предотвращаем изменение размеров при гидратации
   useEffect(() => {
@@ -78,6 +101,10 @@ export default function ProfilePage() {
             <User className="w-4 h-4 mr-2" />
             <span className="whitespace-nowrap">Профиль</span>
           </TabsTrigger>
+          <TabsTrigger value="orders">
+            <ShoppingBag className="w-4 h-4 mr-2" />
+            <span className="whitespace-nowrap">Заказы</span>
+          </TabsTrigger>
           <TabsTrigger value="builds">
             <Package className="w-4 h-4 mr-2" />
             <span className="whitespace-nowrap">Мои сборки</span>
@@ -116,6 +143,10 @@ export default function ProfilePage() {
               onProfileUpdate={handleProfileUpdate}
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="orders" className="space-y-6 w-full">
+          <ProfileOrders />
         </TabsContent>
 
         <TabsContent value="builds" className="space-y-6 w-full">

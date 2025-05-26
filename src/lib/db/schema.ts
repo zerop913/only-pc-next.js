@@ -8,6 +8,7 @@ import {
   timestamp,
   boolean,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { type InferModel } from "drizzle-orm";
@@ -303,6 +304,180 @@ export const compatibilityCheckResultsRelations = relations(
   })
 );
 
+// Таблица статусов заказов
+export const orderStatuses = pgTable("order_statuses", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 20 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица способов доставки
+export const deliveryMethods = pgTable("delivery_methods", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  estimatedDays: varchar("estimated_days", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица способов оплаты
+export const paymentMethods = pgTable("payment_methods", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица адресов доставки
+export const deliveryAddresses = pgTable("delivery_addresses", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  recipientName: varchar("recipient_name", { length: 200 }).notNull(),
+  phoneNumber: varchar("phone_number", { length: 20 }).notNull(),
+  country: varchar("country", { length: 100 }).notNull().default("Россия"),
+  city: varchar("city", { length: 100 }).notNull(),
+  postalCode: varchar("postal_code", { length: 20 }).notNull(),
+  streetAddress: text("street_address").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Таблица заказов
+export const orders = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: varchar("order_number", { length: 12 }).notNull().unique(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  statusId: integer("status_id")
+    .references(() => orderStatuses.id)
+    .notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  deliveryMethodId: integer("delivery_method_id").references(
+    () => deliveryMethods.id
+  ),
+  paymentMethodId: integer("payment_method_id").references(
+    () => paymentMethods.id
+  ),
+  deliveryAddressId: integer("delivery_address_id").references(
+    () => deliveryAddresses.id
+  ),
+  deliveryPrice: decimal("delivery_price", { precision: 10, scale: 2 })
+    .notNull()
+    .default("0"),
+  comment: text("comment"),
+  cardDetailsSnapshot: jsonb("card_details_snapshot"),
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+    mode: "string",
+  }).defaultNow(),
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+    mode: "string",
+  }).defaultNow(),
+});
+
+// Таблица элементов заказа
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .references(() => orders.id, { onDelete: "cascade" })
+    .notNull(),
+  buildId: integer("build_id").references(() => pcBuilds.id),
+  buildSnapshot: jsonb("build_snapshot"), // Снимок сборки на момент заказа
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Таблица истории заказов
+export const orderHistory = pgTable("order_history", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .references(() => orders.id, { onDelete: "cascade" })
+    .notNull(),
+  statusId: integer("status_id")
+    .references(() => orderStatuses.id)
+    .notNull(),
+  comment: text("comment"),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Отношения для заказов
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  user: one(users, {
+    fields: [orders.userId],
+    references: [users.id],
+  }),
+  status: one(orderStatuses, {
+    fields: [orders.statusId],
+    references: [orderStatuses.id],
+  }),
+  deliveryMethod: one(deliveryMethods, {
+    fields: [orders.deliveryMethodId],
+    references: [deliveryMethods.id],
+  }),
+  paymentMethod: one(paymentMethods, {
+    fields: [orders.paymentMethodId],
+    references: [paymentMethods.id],
+  }),
+  deliveryAddress: one(deliveryAddresses, {
+    fields: [orders.deliveryAddressId],
+    references: [deliveryAddresses.id],
+  }),
+  items: many(orderItems),
+  history: many(orderHistory),
+}));
+
+// Отношения для элементов заказа
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  build: one(pcBuilds, {
+    fields: [orderItems.buildId],
+    references: [pcBuilds.id],
+  }),
+}));
+
+// Отношения для истории заказов
+export const orderHistoryRelations = relations(orderHistory, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderHistory.orderId],
+    references: [orders.id],
+  }),
+  status: one(orderStatuses, {
+    fields: [orderHistory.statusId],
+    references: [orderStatuses.id],
+  }),
+  user: one(users, {
+    fields: [orderHistory.userId],
+    references: [users.id],
+  }),
+}));
+
+// Отношения для адресов доставки
+export const deliveryAddressesRelations = relations(
+  deliveryAddresses,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [deliveryAddresses.userId],
+      references: [users.id],
+    }),
+  })
+);
+
 // Типы для использования в приложении
 export type Category = InferModel<typeof categories>;
 export type Product = InferModel<typeof products>;
@@ -316,6 +491,13 @@ export type CompatibilityRule = InferModel<typeof compatibilityRules>;
 export type CompatibilityCheckResult = InferModel<
   typeof compatibilityCheckResults
 >;
+export type OrderStatus = InferModel<typeof orderStatuses>;
+export type DeliveryMethod = InferModel<typeof deliveryMethods>;
+export type PaymentMethod = InferModel<typeof paymentMethods>;
+export type DeliveryAddress = InferModel<typeof deliveryAddresses>;
+export type Order = InferModel<typeof orders>;
+export type OrderItem = InferModel<typeof orderItems>;
+export type OrderHistory = InferModel<typeof orderHistory>;
 
 // Типы для вставки
 export type NewCategory = InferModel<typeof categories, "insert">;
@@ -340,3 +522,10 @@ export type NewCompatibilityCheckResult = InferModel<
   typeof compatibilityCheckResults,
   "insert"
 >;
+export type NewOrderStatus = InferModel<typeof orderStatuses, "insert">;
+export type NewDeliveryMethod = InferModel<typeof deliveryMethods, "insert">;
+export type NewPaymentMethod = InferModel<typeof paymentMethods, "insert">;
+export type NewDeliveryAddress = InferModel<typeof deliveryAddresses, "insert">;
+export type NewOrder = InferModel<typeof orders, "insert">;
+export type NewOrderItem = InferModel<typeof orderItems, "insert">;
+export type NewOrderHistory = InferModel<typeof orderHistory, "insert">;

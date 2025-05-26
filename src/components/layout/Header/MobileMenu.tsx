@@ -14,6 +14,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useCart } from "@/contexts/CartContext";
+import CartBadge from "@/components/pages/Cart/CartBadge";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -55,9 +57,11 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
   const router = useRouter();
   const { isAuthenticated, user, logout, isInitialized } = useAuth();
   const { favorites } = useFavorites();
+  const { getItemsCount } = useCart();
 
-  // Получаем количество избранных товаров
+  // Получаем количество избранных товаров и товаров в корзине
   const favoritesCount = Object.keys(favorites).length;
+  const cartCount = getItemsCount();
 
   // Оптимизированные варианты анимации
   const menuVariants = {
@@ -109,9 +113,13 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
     router.push("/catalog");
     onClose();
   };
-
   const handleFavoritesClick = () => {
     router.push("/favorites");
+    onClose();
+  };
+  
+  const handleCartClick = () => {
+    router.push("/cart");
     onClose();
   };
 
@@ -166,7 +174,12 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
               count={favoritesCount}
               onClick={handleFavoritesClick} // Добавляем обработчик
             />
-            <QuickAction icon={ShoppingCartIcon} label="Корзина" count={1} />
+            <QuickAction 
+              icon={ShoppingCartIcon} 
+              label="Корзина" 
+              count={cartCount > 0 ? cartCount : undefined}
+              onClick={handleCartClick} 
+            />
             <QuickAction
               icon={UserIcon}
               label={

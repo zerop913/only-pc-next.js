@@ -1,4 +1,5 @@
 import { SQL } from "drizzle-orm";
+import { OrderWithRelations } from './order';
 
 export interface RawBuildQueryResult {
   id: number;
@@ -33,3 +34,13 @@ export interface BuildQueryResult {
     };
   };
 }
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface OrderResponse extends ApiResponse<{
+  order: OrderWithRelations;
+}> {}

@@ -8,8 +8,10 @@ import Button from "@/components/common/Button/Button";
 import { ElementType } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { Fragment, useState, useEffect } from "react";
 import Link from "next/link";
+// import CartBadge from "@/components/pages/Cart/CartBadge";
 
 interface ActionButtonProps {
   icon: ElementType;
@@ -55,6 +57,7 @@ interface UserActionsProps {
 
 const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
   const { isAuthenticated, user, logout } = useAuth();
+  const { getItemsCount } = useCart();
   const router = useRouter();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -82,9 +85,12 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
     logout();
     setShowLogoutConfirm(false);
   };
-
   const handleFavoritesClick = () => {
     router.push("/favorites");
+  };
+
+  const handleCartClick = () => {
+    router.push("/cart");
   };
 
   useEffect(() => {
@@ -122,13 +128,16 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
           label="Избранное"
           isTablet={isTablet}
           onClick={handleFavoritesClick}
-        />
-        <ActionButton
-          icon={ShoppingCartIcon}
-          label="Корзина"
-          isTablet={isTablet}
-        />
-
+        />{" "}
+        <div className="relative">
+          <ActionButton
+            icon={ShoppingCartIcon}
+            label="Корзина"
+            isTablet={isTablet}
+            onClick={handleCartClick}
+          />
+          {/* <CartBadge size="sm" /> */}
+        </div>
         {/* Профиль с выпадающим меню */}
         <div className="relative">
           <ActionButton
@@ -176,13 +185,17 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
         isMobile={isMobile}
         isTablet={isTablet}
         onClick={handleFavoritesClick}
-      />
-      <ActionButton
-        icon={ShoppingCartIcon}
-        label="Корзина"
-        isMobile={isMobile}
-        isTablet={isTablet}
-      />
+      />{" "}
+      <div className="relative">
+        <ActionButton
+          icon={ShoppingCartIcon}
+          label="Корзина"
+          isMobile={isMobile}
+          isTablet={isTablet}
+          onClick={handleCartClick}
+        />
+        {/* <CartBadge size={isMobile ? "md" : "sm"} /> */}
+      </div>
       <ActionButton
         icon={isAuthenticated ? UserIcon : ArrowRightOnRectangleIcon}
         label={isAuthenticated ? displayName : "Войти"}

@@ -3,6 +3,7 @@ import { ClientLayout } from "@/components/layout/ClientLayout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ConfiguratorProvider } from "@/contexts/ConfiguratorContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { CartProvider } from "@/contexts/CartContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import LoadingState from "@/components/common/LoadingState";
 import "@fontsource/montserrat-alternates";
@@ -21,14 +22,17 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className="min-h-screen bg-primary-dark" suppressHydrationWarning>
+        {" "}
         <AuthProvider>
           <LoadingState>
             <FavoritesProvider>
-              <ConfiguratorProvider>
-                <ModalProvider>
-                  <ClientLayout>{children}</ClientLayout>
-                </ModalProvider>
-              </ConfiguratorProvider>
+              <CartProvider>
+                <ConfiguratorProvider>
+                  <ModalProvider>
+                    <ClientLayout>{children}</ClientLayout>
+                  </ModalProvider>
+                </ConfiguratorProvider>
+              </CartProvider>
             </FavoritesProvider>
           </LoadingState>
         </AuthProvider>

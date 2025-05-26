@@ -15,8 +15,17 @@ import {
   ClockIcon,
   UserIcon,
   ChevronDownIcon,
+  ShoppingCartIcon,
+  CalendarIcon,
+  ComputerDesktopIcon,
+  CurrencyDollarIcon,
+  CpuChipIcon,
+  WrenchScrewdriverIcon,
+  PlusIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
+import { useCart } from "@/contexts/CartContext";
 
 interface DetailedComponent {
   category: Category;
@@ -59,28 +68,27 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = use(params);
   const [build, setBuild] = useState<DetailedBuild | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedProducts, setExpandedProducts] = useState<Set<number>>(
-    new Set()
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "components"
   );
+  const [isAddedToCart, setIsAddedToCart] = useState(false);
+  const [buttonState, setButtonState] = useState<'default' | 'added' | 'cart'>('default');
+  const router = useRouter();
+  const { addToCart, isItemInCart } = useCart();
 
-  const toggleProductCharacteristics = (productId: number) => {
-    setExpandedProducts((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
-      return next;
-    });
-  };
-
+  // Эффект для проверки состояния корзины при изменении slug
+  useEffect(() => {
+    // Проверяем, есть ли товар в корзине при изменении slug
+    const inCart = isItemInCart(slug);
+    setIsAddedToCart(inCart);
+    setButtonState(inCart ? 'cart' : 'default');
+  }, [slug, isItemInCart]);
+  
   useEffect(() => {
     const fetchBuildDetails = async () => {
       try {
         const buildResponse = await fetch(`/api/builds/${slug}`);
         const buildData = await buildResponse.json();
-        console.log("Build data:", buildData); // Добавляем для отладки
 
         if (!buildResponse.ok) throw new Error(buildData.error);
 
@@ -96,6 +104,17 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
         };
 
         setBuild(processedBuild);
+
+        // Проверяем, есть ли сборка уже в корзине
+        if (processedBuild.id) {
+          const inCart = isItemInCart(processedBuild.id.toString()) || isItemInCart(slug);
+          setIsAddedToCart(inCart);
+          
+          // Если товар в корзине, устанавливаем состояние кнопки "корзина"
+          if (inCart) {
+            setButtonState('cart');
+          }
+        }
       } catch (error) {
         console.error("Error fetching build details:", error);
       } finally {
@@ -104,7 +123,7 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
     };
 
     fetchBuildDetails();
-  }, [slug]);
+  }, [slug, isItemInCart]);
 
   if (isLoading) {
     return (
@@ -128,11 +147,10 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
                 className="bg-gradient-from/10 rounded-xl p-6 border border-primary-border"
               >
                 <div className="flex gap-6">
-                  <div className="w-48 h-48 bg-gradient-from/20 rounded-lg" />
+                  <div className="w-16 h-16 bg-gradient-from/20 rounded-lg" />
                   <div className="flex-1 space-y-4">
                     <div className="h-4 w-32 bg-gradient-from/20 rounded" />
                     <div className="h-6 w-2/3 bg-gradient-from/20 rounded" />
-                    <div className="h-4 w-24 bg-gradient-from/20 rounded" />
                   </div>
                 </div>
               </div>
@@ -152,167 +170,311 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-primary rounded-xl p-6 border border-primary-border">
-        {/* Верхняя часть с навигацией и общей информацией */}
-        <div className="flex flex-col lg:flex-row gap-6 mb-8">
-          {/* Левая колонка с навигацией и информацией */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-4 mb-6">
-              <Link
-                href="/catalog"
-                className="flex items-center gap-2 text-sm text-secondary-light hover:text-white transition-colors"
-              >
-                ← К списку сборок
-              </Link>
-              <div className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-sm border border-blue-500/20">
-                Сборка #{build.id}
-              </div>
-            </div>
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
 
-            <h1 className="text-2xl font-bold text-white mb-4">{build.name}</h1>
-            <div className="flex flex-wrap gap-4 text-sm text-secondary-light">
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-4 h-4 text-blue-400" />
-                <span>{getUserName(build)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ChartBarIcon className="w-4 h-4 text-blue-400" />
-                <span>{build.components.length} компонентов</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ClockIcon className="w-4 h-4 text-blue-400" />
-                <span>{new Date(build.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
+      {/* Хлебные крошки */}
+      <motion.div
+        className="mb-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Link
+          href="/catalog"
+          className="flex items-center gap-2 text-sm text-secondary-light hover:text-white transition-colors w-fit"
+        >
+          ← К списку сборок
+        </Link>
+      </motion.div>
 
-          {/* Правая колонка со стоимостью */}
-          <div className="lg:w-[300px] shrink-0 bg-gradient-from/10 rounded-lg border border-primary-border p-4">
-            <div className="text-sm text-secondary-light mb-1">
-              Общая стоимость
+      {/* Основной контент */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* Левая основная колонка с компонентами */}
+        <div className="xl:col-span-8 space-y-8">
+          {/* Шапка сборки */}
+          <motion.div
+            className="bg-gradient-from/10 rounded-2xl p-8 border border-primary-border overflow-hidden relative group"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Градиентная полоса сверху */}
+            <div
+              className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/40 via-purple-500/40 to-blue-500/40 
+                     opacity-70"
+            />
+            {/* Графический элемент декора */}
+            <div className="absolute top-0 right-0 w-64 h-64 -mr-32 -mt-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>{" "}
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="px-3 py-1 rounded-full bg-blue-500/20 text-white text-sm border border-blue-500/30 backdrop-blur-sm font-medium">
+                  Сборка #{build.id}
+                </div>
+                <div className="bg-gradient-from/30 text-white px-3 py-1 rounded-full text-xs border border-primary-border/40">
+                  {new Date(build.createdAt).toLocaleDateString("ru", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-4 leading-tight">
+                {build.name}
+              </h1>
             </div>
-            <div className="text-2xl font-bold text-white mb-4">
-              {Number(build.totalPrice).toLocaleString()} ₽
-            </div>
-            <Link
-              href="/configurator"
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg 
-                       bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 
-                       hover:text-blue-300 transition-all duration-300 
-                       border border-blue-500/30 text-sm"
-            >
-              Собрать похожую
-            </Link>
+          </motion.div>
+
+          {/* Список компонентов */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+              <ComputerDesktopIcon className="w-6 h-6 text-blue-400/70" />
+              Компоненты сборки
+            </h2>
+
+            {sortComponents(build.components).map(
+              ({ category, product }, index) => {
+                return (
+                  <motion.div
+                    key={`${product.id}-${index}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="group"
+                  >
+                    <Link
+                      href={`/product/${product.slug}?category=${category.slug}`}
+                      className="block"
+                    >
+                      <div className="p-5 bg-gradient-from/20 rounded-xl border border-primary-border/50 hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute inset-0 border-2 border-transparent hover:border-blue-400/20 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+                        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-[auto_auto_1fr] gap-4 items-center">
+                          {/* Номер и категория */}
+                          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-from/20 border border-primary-border backdrop-blur-sm flex-shrink-0">
+                            <span className="text-white font-medium">
+                              {index + 1}
+                            </span>
+                          </div>
+
+                          {/* Изображение */}
+                          <div className="w-20 h-20 relative bg-gradient-from/10 rounded-lg overflow-hidden flex-shrink-0 border border-primary-border/40">
+                            {product.image ? (
+                              <Image
+                                src={formatImagePath(
+                                  category.slug,
+                                  product.image
+                                )}
+                                alt={product.title}
+                                fill
+                                className="object-contain p-2"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <PhotoIcon className="w-6 h-6 text-secondary-light/30" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Информация о продукте */}
+                          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-white text-xs border border-blue-500/30 backdrop-blur-sm inline-block">
+                                {category.name}
+                              </div>
+                              <div className="text-lg font-semibold text-white/90">
+                                {Number(product.price).toLocaleString()} ₽
+                              </div>
+                            </div>
+                            <h3 className="text-base font-medium text-white group-hover:text-blue-300 transition-colors line-clamp-2">
+                              {product.title}
+                            </h3>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              }
+            )}
           </div>
         </div>
 
-        {/* Список компонентов */}
-        <div className="space-y-6">
-          {sortComponents(build.components).map(
-            ({ category, product }, index) => {
-              const isExpanded = expandedProducts.has(product.id);
+        {/* Правая боковая колонка с итогами и действиями */}
+        <div className="xl:col-span-4">
+          <div className="sticky top-24">
+            <motion.div
+              className="bg-gradient-from/20 rounded-xl border border-primary-border overflow-hidden mb-6"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              {/* Заголовок с градиентной линией */}
+              <div className="relative p-5 border-b border-primary-border/50">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <ChartBarIcon className="w-6 h-6 text-blue-400/70" />
+                  Итоги сборки
+                </h2>
+              </div>
 
-              return (
-                <motion.div
-                  key={`${product.id}-${index}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                >
-                  <div className="p-6 bg-gradient-from/10 hover:bg-gradient-from/20 rounded-xl border border-primary-border transition-all duration-300">
-                    <div className="flex flex-col gap-6">
-                      {/* Заголовок компонента */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <span className="text-blue-400 font-medium">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-gradient-from/30 text-secondary-light text-sm border border-primary-border/50">
-                          {category.name}
-                        </div>
+              <div className="p-5">
+                {/* Выделенный блок с ценой */}
+                <div className="bg-gradient-from/40 p-4 mb-5 rounded-lg border border-primary-border relative overflow-hidden">
+                  {/* Декоративный элемент */}
+                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-blue-500/5 rounded-full blur-xl pointer-events-none"></div>
+
+                  <div className="flex justify-between items-center relative z-10">
+                    <div>
+                      <div className="text-sm text-secondary-light mb-1">
+                        Общая стоимость
                       </div>
-
-                      {/* Основная информация */}
-                      <div className="flex gap-8">
-                        {/* Изображение */}
-                        <div className="w-40 h-40 relative bg-gradient-from/5 rounded-xl overflow-hidden flex-shrink-0 border border-primary-border/30">
-                          {product.image ? (
-                            <Image
-                              src={formatImagePath(
-                                category.slug,
-                                product.image
-                              )}
-                              alt={product.title}
-                              fill
-                              className="object-contain"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <PhotoIcon className="w-12 h-12 text-secondary-light/30" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Информация о продукте */}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-xl font-medium text-white mb-3">
-                            {product.title}
-                          </h3>
-                          <div className="text-2xl font-semibold text-blue-400 mb-4">
-                            {Number(product.price).toLocaleString()} ₽
-                          </div>
-
-                          {/* Характеристики */}
-                          {product.characteristics && (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
-                                {(isExpanded
-                                  ? product.characteristics
-                                  : product.characteristics.slice(0, 6)
-                                ).map((char, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center gap-2 text-sm border-b border-primary-border/20 py-2"
-                                  >
-                                    <div className="flex-1 text-secondary-light">
-                                      {char.type}
-                                    </div>
-                                    <div className="flex-1 text-white font-medium">
-                                      {char.value}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {product.characteristics.length > 6 && (
-                                <button
-                                  onClick={() =>
-                                    toggleProductCharacteristics(product.id)
-                                  }
-                                  className="inline-flex items-center gap-1 px-4 py-2 text-sm text-blue-400 
-                                         hover:text-blue-300 transition-colors bg-gradient-from/10 
-                                         hover:bg-gradient-from/20 rounded-lg border border-primary-border/30"
-                                >
-                                  {isExpanded ? "Скрыть" : "Все характеристики"}
-                                  <ChevronDownIcon
-                                    className={`w-4 h-4 transition-transform duration-300 ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
-                                  />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                      <div className="text-2xl font-bold text-white">
+                        {Number(build.totalPrice).toLocaleString()} ₽
                       </div>
                     </div>
+                    <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/30">
+                      <CurrencyDollarIcon className="w-6 h-6 text-blue-400" />
+                    </div>
                   </div>
-                </motion.div>
-              );
-            }
-          )}
+                </div>
+
+                {/* Автор сборки */}
+                <div className="flex items-center gap-3 p-3 bg-gradient-from/30 rounded-lg border border-primary-border/50 mb-5 hover:border-blue-500/30 transition-all duration-300">
+                  <UserIcon className="w-5 h-5 text-blue-400/80" />
+                  <div>
+                    <div className="text-xs text-secondary-light">Автор</div>
+                    <div className="text-white font-medium">
+                      {getUserName(build)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Кнопка купить */}
+              <div className="px-5 mb-4">
+                <motion.button
+                  className={`w-full relative overflow-hidden font-bold py-3 px-6 rounded-lg transition-all duration-300 group backdrop-blur-sm border ${
+                    buttonState === 'added' 
+                      ? 'bg-green-500/30 hover:bg-green-500/40 border-green-500/50 text-white' 
+                      : buttonState === 'cart'
+                        ? 'bg-blue-400/30 hover:bg-blue-400/40 border-blue-400/50 text-white'
+                        : 'bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-white'
+                  }`}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (build && !isItemInCart(slug) && buttonState === 'default') {
+                      // Создаем объект с компонентами для отображения в корзине
+                      const cartComponents: Record<
+                        string,
+                        { name: string; categoryName: string }
+                      > = {};
+
+                      // Добавляем основные компоненты
+                      build.components.forEach(({ category, product }) => {
+                        cartComponents[category.slug] = {
+                          name: product.title,
+                          categoryName: category.name,
+                        };
+                      });
+
+                      // Добавляем сборку в корзину
+                      addToCart({
+                        id: build.id,
+                        slug: slug,
+                        name: build.name,
+                        type: "build",
+                        price: parseFloat(build.totalPrice),
+                        quantity: 1,
+                        components: cartComponents,
+                        // Используем изображение первого компонента (обычно процессора или видеокарты)
+                        image: build.components[0]?.product.image || "",
+                      });
+
+                      // Изменяем состояние кнопки на "добавлено"
+                      setButtonState('added');
+                      
+                      // Через 2 секунды меняем на состояние "корзина"
+                      setTimeout(() => {
+                        setButtonState('cart');
+                      }, 2000);
+                    } else {
+                      // Перенаправляем на страницу корзины
+                      router.push("/cart");
+                    }
+                  }}
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {buttonState === 'added' ? (
+                      <>
+                        <CheckIcon className="w-5 h-5" />
+                        Товар добавлен
+                      </>
+                    ) : buttonState === 'cart' || isItemInCart(slug) ? (
+                      <>
+                        <ShoppingCartIcon className="w-5 h-5" />
+                        Перейти в корзину
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCartIcon className="w-5 h-5" />
+                        Добавить в корзину
+                      </>
+                    )}
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+                </motion.button>
+              </div>
+
+              {/* Кнопка редактирования */}
+              <div className="px-5 pb-5">
+                <Link
+                  href={`/configurator?loadBuild=${build.slug}`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg 
+                          bg-gradient-from/30 hover:bg-gradient-from/50 text-white 
+                          transition-all duration-300 
+                          border border-primary-border text-sm font-medium"
+                >
+                  <WrenchScrewdriverIcon className="w-5 h-5 text-blue-400/70" />
+                  Редактировать в конфигураторе
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Рекомендуемые дополнения */}
+            <motion.div
+              className="bg-gradient-from/20 rounded-xl border border-primary-border overflow-hidden"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              {/* Заголовок с градиентной линией */}
+              <div className="relative p-5 border-b border-primary-border/50">
+                <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                  <CpuChipIcon className="w-5 h-5 text-blue-400/70" />
+                  Соберите похожую
+                </h3>
+              </div>
+
+              <div className="p-5">
+                <p className="text-secondary-light text-sm mb-4">
+                  Возьмите эту сборку за основу для создания собственной
+                  конфигурации
+                </p>
+
+                <Link
+                  href="/configurator"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg 
+                          bg-blue-500/20 hover:bg-blue-500/30 text-white
+                          transition-all duration-300 
+                          border border-blue-500/30 backdrop-blur-sm text-sm font-medium group relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    <ComputerDesktopIcon className="w-5 h-5" />
+                    Собрать похожую
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>

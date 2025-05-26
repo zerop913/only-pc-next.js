@@ -11,13 +11,22 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { LoginSchema, RegisterSchema } from "@/services/authService";
 
+// Тип данных профиля пользователя
+export interface Profile {
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  phoneNumber?: string;
+  city?: string;
+}
+
 // Тип данных пользователя
 export interface User {
   id: number;
   email: string;
   roleId: number;
-  isAdmin?: boolean;
-  isManager?: boolean;
+  isActive: boolean;
+  profile?: Profile;
 }
 
 // Определяем типы для результатов операций

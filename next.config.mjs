@@ -14,6 +14,9 @@ const nextConfig = {
   },
   serverExternalPackages: [],
   reactStrictMode: false,
+  experimental: {
+    enableUndici: true,
+  },
 };
 
 process.env.PORT = process.env.PORT || "5000";

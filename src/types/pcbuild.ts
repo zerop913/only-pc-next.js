@@ -26,6 +26,24 @@ export interface PcBuildResponse {
   };
 }
 
+// Интерфейс для сокращенной информации о сборке ПК на странице оформления заказа
+export interface PcBuildSummary {
+  id: number;
+  name: string;
+  totalPrice: string;
+  components: Record<
+    string,
+    {
+      categoryId: number;
+      categoryName: string;
+      productId: number;
+      name: string;
+      price: string | number;
+      image: string;
+    }
+  >;
+}
+
 export interface DetailedComponent {
   category: Category;
   product: Product;
