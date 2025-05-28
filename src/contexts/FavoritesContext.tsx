@@ -15,7 +15,8 @@ interface FavoritesContextType {
   favorites: FavoritesMap;
   isLoading: boolean;
   addToFavorites: (productId: number) => Promise<void>;
-  removeFromFavorites: (productId: number) => Promise<void>;
+  removeFromFavorites: (favoriteIdOrProductId: number, isProductId?: boolean) => Promise<void>;
+  clearAllFavorites: () => Promise<void>;
   isFavorite: (productId: number) => boolean;
 }
 
@@ -103,34 +104,65 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     },
     [favoriteIds]
   );
-
   const removeFromFavorites = useCallback(
-    async (productId: number) => {
+    async (favoriteIdOrProductId: number, isProductId: boolean = false) => {
       try {
+        let productId: number | undefined;
+        let favoriteId: number | undefined;
+        
+        // Определяем тип идентификатора
+        if (isProductId) {
+          productId = favoriteIdOrProductId;
+        } else {
+          favoriteId = favoriteIdOrProductId;
+          
+          // Найдем productId по favoriteId для обновления локального состояния
+          for (const categoryItems of Object.values(favorites)) {
+            const item = categoryItems.find(item => item.id === favoriteId);
+            if (item) {
+              productId = item.productId;
+              break;
+            }
+          }
+        }
+
         // Оптимистичное обновление: удаляем из локального состояния сразу
         setFavorites((prev) => {
           const newFavorites: FavoritesMap = {};
           for (const [categoryId, products] of Object.entries(prev)) {
-            const filteredProducts = products.filter(
-              (item) => item.productId !== productId
-            );
+            let filteredProducts;
+            if (favoriteId) {
+              filteredProducts = products.filter(
+                (item) => item.id !== favoriteId
+              );
+            } else if (productId) {
+              filteredProducts = products.filter(
+                (item) => item.productId !== productId
+              );
+            } else {
+              filteredProducts = products;
+            }
             if (filteredProducts.length > 0) {
               newFavorites[Number(categoryId)] = filteredProducts;
             }
           }
           return newFavorites;
         });
-        setFavoriteIds((prev) => {
-          const newIds = new Set(prev);
-          newIds.delete(productId);
-          return newIds;
-        });
+        
+        // Обновляем set с ID продуктов
+        if (productId) {
+          setFavoriteIds((prev) => {
+            const newIds = new Set(prev);
+            newIds.delete(productId);
+            return newIds;
+          });
+        }
 
         // Отправляем запрос на сервер
         const response = await fetch("/api/favorites", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId }),
+          body: JSON.stringify(favoriteId ? { favoriteId } : { productId }),
         });
 
         // Если запрос не удался, откатываем изменения
@@ -166,6 +198,29 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     [fetchFavorites]
   );
 
+  const clearAllFavorites = useCallback(async () => {
+    try {
+      // Оптимистичное обновление: очищаем локальное состояние сразу
+      setFavorites({});
+      setFavoriteIds(new Set());
+
+      // Отправляем запрос на сервер для очистки всех избранных
+      const response = await fetch("/api/favorites/clear", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // Если запрос не удался, обновляем состояние с сервера
+      if (!response.ok) {
+        await fetchFavorites();
+      }
+    } catch (error) {
+      console.error("Error clearing favorites:", error);
+      // В случае ошибки обновляем состояние с сервера
+      await fetchFavorites();
+    }
+  }, [fetchFavorites]);
+
   return (
     <FavoritesContext.Provider
       value={{
@@ -173,6 +228,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         addToFavorites,
         removeFromFavorites,
+        clearAllFavorites,
         isFavorite,
       }}
     >
@@ -188,11 +244,12 @@ export const useFavorites = () => {
       "FavoritesContext not found. Make sure you are using FavoritesProvider"
     );
     // Возвращаем базовое состояние вместо выброса ошибки
-    return {
+  return {
       favorites: {},
       isLoading: true,
       addToFavorites: async () => {},
-      removeFromFavorites: async () => {},
+      removeFromFavorites: async (_: number, __?: boolean) => {},
+      clearAllFavorites: async () => {},
       isFavorite: () => false,
     };
   }

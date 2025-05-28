@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { FavoriteProduct } from "@/types/favorite";
+import { FavoriteItem } from "@/types/favorite";
 import FavoriteCategory from "./FavoriteCategory";
-import { motion } from "framer-motion";
-import { HeartIcon } from "@heroicons/react/24/outline";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  HeartIcon,
+  ShoppingBagIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { Heart } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function FavoritesPage() {
-  const { favorites, isLoading } = useFavorites();
+  const router = useRouter();
+  const { favorites, isLoading, clearAllFavorites } = useFavorites();
   const [groupedFavorites, setGroupedFavorites] = useState<{
-    [key: string]: FavoriteProduct[];
+    [key: string]: FavoriteItem[];
   }>({});
   const [totalFavorites, setTotalFavorites] = useState(0);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     console.log("Favorites data:", favorites);
@@ -35,7 +42,7 @@ export default function FavoritesPage() {
             }
             return acc;
           },
-          {} as Record<string, FavoriteProduct[]>
+          {} as Record<string, FavoriteItem[]>
         );
 
         setGroupedFavorites(mapped);
@@ -54,14 +61,17 @@ export default function FavoritesPage() {
     } else if (Array.isArray(favorites)) {
       // Если favorites - это массив (на случай, если формат API изменится)
       try {
-        const grouped = favorites.reduce((acc, item) => {
-          const categoryName = item.product?.category?.name || "Другое";
-          if (!acc[categoryName]) {
-            acc[categoryName] = [];
-          }
-          acc[categoryName].push(item);
-          return acc;
-        }, {} as Record<string, FavoriteProduct[]>);
+        const grouped = favorites.reduce(
+          (acc, item) => {
+            const categoryName = item.product?.category?.name || "Другое";
+            if (!acc[categoryName]) {
+              acc[categoryName] = [];
+            }
+            acc[categoryName].push(item);
+            return acc;
+          },
+          {} as Record<string, FavoriteItem[]>
+        );
 
         setGroupedFavorites(grouped);
         setTotalFavorites(favorites.length);
@@ -80,94 +90,141 @@ export default function FavoritesPage() {
   // Проверка наличия товаров в избранном
   const hasFavorites = totalFavorites > 0;
 
+  // Функция очистки всех избранных товаров
+  const handleClearAll = () => {
+    setIsClearing(true);
+    setTimeout(() => {
+      clearAllFavorites();
+      setIsClearing(false);
+    }, 300);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-12 min-h-[300px]">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full border-4 border-t-blue-400 border-primary-border animate-spin mb-4"></div>
-          <p className="text-secondary-light">Загрузка избранного...</p>
+      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+        <div className="animate-pulse flex flex-col items-center py-20">
+          <div className="w-14 h-14 rounded-full border-4 border-t-blue-400 border-primary-border animate-spin mb-6"></div>
+          <p className="text-lg text-secondary-light">Загрузка избранного...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-primary rounded-xl p-6 border border-primary-border shadow-xl">
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-gradient-from/20 rounded-lg border border-primary-border">
-                <Heart className="w-5 h-5 text-red-400" />
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
-                Избранное
-              </h1>
-            </div>
-            <div className="text-sm px-3 py-1.5 bg-gradient-from/10 rounded-lg border border-primary-border text-secondary-light">
-              {hasFavorites
-                ? `${totalFavorites} ${
-                    totalFavorites === 1
-                      ? "товар"
-                      : totalFavorites < 5
-                      ? "товара"
-                      : "товаров"
-                  }`
-                : "Нет товаров"}
-            </div>
-          </div>
-
-          <div className="py-3 px-4 bg-gradient-from/10 border border-primary-border rounded-lg flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-from/20 flex items-center justify-center">
-              <HeartIcon className="w-5 h-5 text-red-400" />
-            </div>
-            <p className="text-secondary-light text-sm">
-              Здесь отображаются все товары, которые вы добавили в избранное. Вы
-              можете быстро перейти к ним или удалить из списка.
-            </p>
-          </div>
+    <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mb-6"
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <Heart className="w-5 h-5 text-red-400" />
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            Избранные товары
+          </h1>
         </div>
+        <p className="text-secondary-light">
+          Здесь собраны товары, которые вы отметили как избранные
+        </p>
+      </motion.div>
 
-        {hasFavorites ? (
-          <div className="space-y-8">
-            {Object.keys(groupedFavorites).length > 0 ? (
-              Object.entries(groupedFavorites).map(([categoryName, items]) => (
-                <FavoriteCategory
-                  key={categoryName}
-                  name={categoryName}
-                  favoriteItems={items}
-                />
-              ))
-            ) : (
-              <div className="text-center py-8 text-secondary-light">
-                Ошибка группировки товаров. Пожалуйста, обновите страницу.
+      <div>
+        <motion.div
+          className="lg:col-span-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          {hasFavorites ? (
+            <div className="bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden">
+              <div className="p-5 border-b border-primary-border/50 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <HeartIcon className="w-5 h-5 text-red-400/70" />
+                  <h2 className="text-xl font-semibold text-white">
+                    Избранные товары
+                  </h2>
+                  <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-sm rounded-full border border-red-500/20">
+                    {totalFavorites}
+                  </span>
+                </div>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  className={`p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 ${
+                    isClearing ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                  onClick={handleClearAll}
+                  disabled={isClearing}
+                  title="Очистить избранное"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </motion.button>
               </div>
-            )}
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-16 text-center"
-          >
-            <div className="w-16 h-16 bg-gradient-from/20 rounded-full flex items-center justify-center mb-4 border border-primary-border">
-              <HeartIcon className="w-8 h-8 text-secondary-light" />
+
+              <div className="space-y-4 p-4">
+                <AnimatePresence>
+                  {Object.entries(groupedFavorites).map(
+                    ([categoryName, items]) => (
+                      <FavoriteCategory
+                        key={categoryName}
+                        name={categoryName}
+                        favoriteItems={items}
+                      />
+                    )
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Нижний блок со ссылкой на каталог */}
+              <div className="p-5 border-t border-primary-border/50 flex justify-between items-center">
+                <div className="text-secondary-light text-sm">
+                  Хотите посмотреть больше товаров?
+                </div>
+                <motion.a
+                  href="/catalog"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-from/30 hover:bg-gradient-from/40 text-white rounded-lg border border-primary-border transition-all duration-300"
+                >
+                  <ShoppingBagIcon className="w-4 h-4" />
+                  <span>Перейти в каталог</span>
+                </motion.a>
+              </div>
             </div>
-            <h3 className="text-xl font-medium text-white mb-2">
-              Список избранного пуст
-            </h3>
-            <p className="text-secondary-light mb-6 max-w-md">
-              Вы еще не добавили ни одного товара в избранное. Добавляйте
-              товары, которые вам понравились, чтобы быстро к ним вернуться.
-            </p>
-            <Link
-              href="/configurator"
-              className="px-5 py-2.5 bg-gradient-from/20 hover:bg-gradient-from/30 transition-all duration-300 rounded-lg border border-primary-border text-white"
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden p-10"
             >
-              Перейти в каталог
-            </Link>
-          </motion.div>
-        )}
+              <div className="flex flex-col items-center justify-center text-center py-10">
+                <div className="w-20 h-20 bg-gradient-from/20 rounded-full flex items-center justify-center mb-6 border border-primary-border">
+                  <HeartIcon className="w-10 h-10 text-red-400/50" />
+                </div>
+                <h3 className="text-2xl font-medium text-white mb-3">
+                  У вас пока нет избранных товаров
+                </h3>
+                <p className="text-secondary-light mb-8 max-w-md">
+                  Добавляйте понравившиеся товары в избранное, нажимая на иконку
+                  сердечка. Это поможет вам быстро найти их позже.
+                </p>
+
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <Link
+                    href="/configurator"
+                    className="flex items-center gap-2 px-5 py-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-white border border-blue-500/30 transition-all"
+                  >
+                    <ShoppingBagIcon className="w-5 h-5" />
+                    Перейти в конфигуратор
+                  </Link>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
       </div>
     </div>
   );

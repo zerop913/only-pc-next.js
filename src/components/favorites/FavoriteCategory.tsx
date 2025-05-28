@@ -1,21 +1,27 @@
 import { useState, useEffect } from "react";
-import { FavoriteProduct } from "@/types/favorite";
+import { FavoriteItem } from "@/types/favorite";
 import ProductCard from "./ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 interface FavoriteCategoryProps {
   name: string;
-  favoriteItems: FavoriteProduct[];
+  favoriteItems: FavoriteItem[];
 }
 
-export default function FavoriteCategory({ name, favoriteItems }: FavoriteCategoryProps) {
+export default function FavoriteCategory({
+  name,
+  favoriteItems,
+}: FavoriteCategoryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [visibleItems, setVisibleItems] = useState<FavoriteProduct[]>([]);
-  
+  const [visibleItems, setVisibleItems] = useState<FavoriteItem[]>([]);
+
   // Обновляем состояние visibleItems когда меняются favoriteItems
   useEffect(() => {
-    if (Array.isArray(favoriteItems) && favoriteItems.every(item => item && item.id)) {
+    if (
+      Array.isArray(favoriteItems) &&
+      favoriteItems.every((item) => item && item.id)
+    ) {
       setVisibleItems(favoriteItems);
     } else {
       setVisibleItems([]);
@@ -24,7 +30,7 @@ export default function FavoriteCategory({ name, favoriteItems }: FavoriteCatego
 
   // Обработчик удаления товара из списка
   const handleRemove = (itemId: number) => {
-    setVisibleItems(prev => prev.filter(item => item.id !== itemId));
+    setVisibleItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
   // Если нет товаров для отображения, не рендерим категорию
@@ -34,7 +40,7 @@ export default function FavoriteCategory({ name, favoriteItems }: FavoriteCatego
 
   return (
     <div className="bg-gradient-from/5 rounded-xl border border-primary-border overflow-hidden">
-      <button 
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between px-5 py-4 bg-gradient-from/10 border-b border-primary-border/50 text-left"
       >
@@ -44,11 +50,11 @@ export default function FavoriteCategory({ name, favoriteItems }: FavoriteCatego
             {visibleItems.length}
           </span>
         </div>
-        <ChevronDown 
-          className={`w-5 h-5 text-secondary-light transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} 
+        <ChevronDown
+          className={`w-5 h-5 text-secondary-light transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
         />
       </button>
-      
+
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -65,12 +71,16 @@ export default function FavoriteCategory({ name, favoriteItems }: FavoriteCatego
                     key={item.id}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.8,
+                      transition: { duration: 0.2 },
+                    }}
                     layout
                   >
-                    <ProductCard 
+                    <ProductCard
                       favoriteItem={item}
-                      onRemove={() => handleRemove(item.id)} 
+                      onRemove={() => handleRemove(item.id)}
                     />
                   </motion.div>
                 ))}

@@ -34,7 +34,21 @@ export async function addToFavorites(productId: number, userId?: number) {
     .returning();
 }
 
-export async function removeFromFavorites(productId: number, userId?: number) {
+export async function removeFromFavorites(favoriteId: number, userId?: number) {
+  return await db
+    .delete(favorites)
+    .where(
+      and(
+        eq(favorites.id, favoriteId),
+        userId ? eq(favorites.userId, userId) : isNull(favorites.userId)
+      )
+    );
+}
+
+export async function removeFromFavoritesByProductId(
+  productId: number,
+  userId?: number
+) {
   return await db
     .delete(favorites)
     .where(
@@ -97,7 +111,6 @@ export async function getFavorites(userId?: number): Promise<FavoritesMap> {
       if (!acc[categoryId]) {
         acc[categoryId] = [];
       }
-
       const favoriteItem: FavoriteItem = {
         id: Number(item.id),
         productId: Number(item.productId),
@@ -110,6 +123,8 @@ export async function getFavorites(userId?: number): Promise<FavoritesMap> {
           image: item.product_image,
           categoryId: Number(item.product_categoryId),
           characteristics: [],
+          description: null, // Добавляем отсутствующее поле description
+          createdAt: new Date().toISOString(), // Добавляем отсутствующее поле createdAt
           category: {
             name: String(item.category_name),
             slug: String(item.category_slug),
@@ -189,4 +204,14 @@ export async function mergeFavorites(userId: number, temporaryIds: number[]) {
       throw error;
     }
   });
+}
+
+/**
+ * Удаляет все избранные товары пользователя
+ * @param userId ID пользователя или undefined для анонимных записей
+ */
+export async function clearFavorites(userId?: number) {
+  return await db
+    .delete(favorites)
+    .where(userId ? eq(favorites.userId, userId) : isNull(favorites.userId));
 }

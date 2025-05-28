@@ -4,6 +4,7 @@ import {
   addToFavorites,
   getFavorites,
   removeFromFavorites,
+  removeFromFavoritesByProductId,
   mergeFavorites,
 } from "@/services/favoriteService";
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { productId } = await request.json();
+    const { favoriteId, productId } = await request.json();
     const token = request.cookies.get("token")?.value;
     let userId: number | undefined;
 
@@ -80,7 +81,13 @@ export async function DELETE(request: NextRequest) {
       userId = decoded.userId;
     }
 
-    await removeFromFavorites(productId, userId);
+    // Поддерживаем оба способа удаления: по favoriteId или по productId
+    if (favoriteId !== undefined) {
+      await removeFromFavorites(favoriteId, userId);
+    } else if (productId !== undefined) {
+      await removeFromFavoritesByProductId(productId, userId);
+    }
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Remove from favorites error:", error);

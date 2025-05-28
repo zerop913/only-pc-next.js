@@ -1,14 +1,14 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FavoriteProduct } from "@/types/favorite";
+import { FavoriteItem } from "@/types/favorite";
 import { Trash2, ImageIcon } from "lucide-react";
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Notification from "@/components/common/Notification/Notification";
 import { motion } from "framer-motion";
 
 interface ProductCardProps {
-  favoriteItem: FavoriteProduct;
+  favoriteItem: FavoriteItem;
   onRemove?: () => void;
 }
 
@@ -20,6 +20,7 @@ export default function ProductCard({
   const { removeFromFavorites } = useFavorites();
   const [imageLoading, setImageLoading] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
 
   // Получаем данные о продукте из favoriteItem
@@ -48,6 +49,7 @@ export default function ProductCard({
 
       // Используем ID из favoriteItem для удаления из избранного
       await removeFromFavorites(favoriteItem.id);
+      setNotificationMessage("Товар удален из избранного");
       setShowNotification(true);
 
       setTimeout(() => {
@@ -162,11 +164,10 @@ export default function ProductCard({
             </div>
           </div>
         </div>
-      </motion.div>
-
+      </motion.div>{" "}
       <Notification
-        type="error"
-        message="Товар удален из избранного"
+        type="success"
+        message={notificationMessage}
         isVisible={showNotification}
         onClose={() => setShowNotification(false)}
       />
