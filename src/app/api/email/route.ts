@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { redis } from "@/lib/redis";
-import emailTemplate from "@/lib/utils/emailTemplate";
+import { renderVerificationEmail } from "@/lib/utils/emailRenderer";
 
 // Инициализация Resend API
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -23,11 +23,15 @@ export async function POST(request: NextRequest) {
     // Генерируем и сохраняем код
     const code = generateVerificationCode();
     // Код действителен 5 минут
-    await redis.set(`email_verification:${email}`, code, "EX", 300); // Получаем HTML шаблон с кодом из внешнего файла
-    const htmlContent = emailTemplate(code); // Отправляем письмо с использованием Resend
+    await redis.set(`email_verification:${email}`, code, "EX", 300);
+
+    // Используем новую функцию для рендеринга письма
+    const htmlContent = await renderVerificationEmail(code);
+
+    // Отправляем письмо с использованием Resend
     const { data, error } = await resend.emails.send({
-      from: "OnlyPC <noreply@only-pc.ru>", // Замените only-pc.ru на ваш реальный домен
-      replyTo: process.env.MAIL_REPLY_TO || "contact@only-pc.ru", // Опционально: замените на адрес для ответов
+      from: "OnlyPC <noreply@only-pc.ru>",
+      replyTo: process.env.MAIL_REPLY_TO || "contact@only-pc.ru",
       to: email,
       subject: "Код подтверждения входа в OnlyPC",
       html: htmlContent,

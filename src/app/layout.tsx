@@ -13,6 +13,9 @@ import "../styles/globals.css";
 export const metadata: Metadata = {
   title: "OnlyPC",
   description: "OnlyPC - Конфигуратор ПК",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

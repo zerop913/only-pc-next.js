@@ -13,7 +13,6 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { Tailwind } from "@react-email/tailwind";
 
 interface OrderConfirmationEmailProps {
   orderNumber: string;
@@ -54,217 +53,560 @@ export const OrderConfirmationEmail = ({
     }).format(amount);
   };
 
+  // Обновленная более яркая цветовая схема
+  const primaryColor = "#131421"; // Немного светлее для основных элементов
+  const primaryDarkColor = "#0D0E19"; // Фон страницы (темный, но не совсем черный)
+  const primaryBorderColor = "#343656"; // Более заметные границы для контраста
+  const secondaryColor = "#AEB0BD"; // Светлее для лучшей читаемости
+  const secondaryDarkColor = "#7E808F"; // Средний серый для меньшей важности текста
+  const secondaryLightColor = "#E0E0E9"; // Почти белый для основного текста
+  const gradientFromColor = "#212235"; // Более светлый градиент для фона карточек
+  const gradientToColor = "#282A3D"; // Более светлый конечный цвет градиента
+  const accentColor = "#4F92FF"; // Более яркий и насыщенный синий
+  const accentLightColor = "#75A8FF"; // Светлый синий для эффектов наведения
+  const highlightColor = "#9D6FFF"; // Более яркий фиолетовый для акцентов
+
+  // Стиль для основного блока (без позиционированной полосы)
+  const sectionStyle = {
+    padding: "0",
+    backgroundColor: gradientFromColor,
+    backgroundImage: `linear-gradient(145deg, ${gradientFromColor}, ${gradientToColor})`,
+    borderRadius: "16px",
+    border: `2px solid ${primaryBorderColor}`,
+    overflow: "hidden" as "hidden",
+    marginBottom: "32px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+  };
+
+  // Новый стиль для содержимого секции с паддингами
+  const sectionContentStyle = {
+    padding: "32px",
+  };
+
+  const cardStyle = {
+    padding: "20px",
+    backgroundColor: primaryColor,
+    borderRadius: "12px",
+    border: `1px solid ${primaryBorderColor}`,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  };
+
   return (
     <Html>
-      <Head />
+      <Head>
+        <title>Подтверждение заказа #{orderNumber} - OnlyPC</title>
+      </Head>
       <Preview>Подтверждение заказа #{orderNumber} - OnlyPC</Preview>
-      <Tailwind
-        config={{
-          theme: {
-            extend: {
-              colors: {
-                primary: {
-                  DEFAULT: "#0E0F18",
-                  dark: "#0A0B14",
-                  border: "#1F1E24",
-                  light: "#1A1B23",
-                },
-                secondary: {
-                  DEFAULT: "#9D9EA6",
-                  dark: "#6D6E7A",
-                  light: "#B8B9C3",
-                },
-                gradient: {
-                  from: "#1D1E2C",
-                  to: "#252736",
-                },
-                blue: {
-                  400: "#60a5fa",
-                  500: "#3b82f6",
-                  600: "#2563eb",
-                },
-              },
-              boxShadow: {
-                sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-                md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-                lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-                xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-              },
-              fontFamily: {
-                sans: ["Montserrat Alternates", "sans-serif"],
-              },
-            },
-          },
+      <Body
+        style={{
+          backgroundColor: primaryDarkColor,
+          margin: "0",
+          padding: "0",
+          fontFamily: "'Montserrat Alternates', Arial, sans-serif",
+          color: "#FFFFFF",
         }}
       >
-        <Body className="bg-primary-dark font-sans">
-          <Container className="max-w-[700px] mx-auto my-12">
-            {/* Верхний блок */}
-            <Section className="p-8 bg-gradient-from/20 rounded-2xl border-2 border-primary-border/50 hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden w-full mb-8">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30" />
+        {/* Контейнер письма */}
+        <Container
+          style={{
+            maxWidth: "700px",
+            margin: "0 auto",
+            padding: "48px 0",
+            width: "100%",
+          }}
+        >
+          {/* Верхний блок */}
+          <Section style={sectionStyle}>
+            {/* Верхняя полоса как отдельная таблица для лучшей совместимости */}
+            <table
+              width="100%"
+              cellPadding="0"
+              cellSpacing="0"
+              border={0}
+              style={{ borderCollapse: "collapse" }}
+            >
+              <tr>
+                <td
+                  style={{
+                    height: "6px",
+                    background: `linear-gradient(to right, ${highlightColor}, ${accentColor}, ${highlightColor})`,
+                    opacity: "0.8",
+                  }}
+                ></td>
+              </tr>
+            </table>
 
+            {/* Содержимое секции с отступами */}
+            <div style={sectionContentStyle}>
               <Row>
-                <Column className="w-full">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-from/40 rounded-xl p-2.5 border border-blue-500/20">
-                        <Img
-                          src="https://only-pc.ru/logo.svg"
-                          alt="OnlyPC Logo"
-                          width="28"
-                          height="28"
-                          className="w-full h-full"
-                        />
+                <Column>
+                  <div
+                    style={{
+                      display: "table",
+                      width: "100%",
+                      marginBottom: "32px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "table-cell",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-block",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        <div
+                        // style={{
+                        //   width: "64px",
+                        //   height: "64px",
+                        //   backgroundColor: primaryColor,
+                        //   borderRadius: "12px",
+                        //   padding: "12px",
+                        //   border: `1px solid ${primaryBorderColor}`,
+                        //   display: "inline-block",
+                        //   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        // }}
+                        >
+                          <Img
+                            src="/logo.svg"
+                            alt="OnlyPC Logo"
+                            width="40"
+                            height="40"
+                            style={{
+                              display: "block",
+                              width: "80%",
+                              height: "auto",
+                              maxWidth: "80%",
+                              objectFit: "contain",
+                            }}
+                          />
+                        </div>
                       </div>
-                      <Text className="text-blue-400 text-2xl font-semibold m-0">
-                        OnlyPC
-                      </Text>
                     </div>
-                    <div className="px-5 py-2.5 bg-gradient-from/40 rounded-xl border border-blue-500/30">
-                      <Text className="text-blue-400 text-base font-medium m-0">
-                        Заказ #{orderNumber}
-                      </Text>
+                    <div
+                      style={{
+                        display: "table-cell",
+                        verticalAlign: "middle",
+                        textAlign: "right",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "10px 20px",
+                          backgroundColor: primaryColor,
+                          borderRadius: "12px",
+                          border: `1px solid ${primaryBorderColor}`,
+                          display: "inline-block",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: accentLightColor,
+                            fontSize: "16px",
+                            fontWeight: "500",
+                            margin: "0",
+                          }}
+                        >
+                          Заказ #{orderNumber}
+                        </Text>
+                      </div>
                     </div>
                   </div>
-                  <Text className="text-white text-3xl font-bold mb-4">
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: "28px",
+                      fontWeight: "700",
+                      margin: "0 0 16px 0",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                    }}
+                  >
                     Заказ подтвержден
                   </Text>
-                  <Text className="text-secondary-light text-lg leading-relaxed">
+                  <Text
+                    style={{
+                      color: secondaryLightColor,
+                      fontSize: "18px",
+                      lineHeight: "1.5",
+                      margin: "0",
+                    }}
+                  >
                     Здравствуйте, {customerName}! <br />
                     Благодарим за ваш заказ от {orderDate}.
                   </Text>
                 </Column>
               </Row>
-            </Section>
+            </div>
+          </Section>
 
-            {/* Блок с информацией о заказе */}
-            <Section className="p-8 bg-gradient-from/20 rounded-2xl border-2 border-primary-border/50 hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden w-full mb-8">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30" />
+          {/* Блок с информацией о заказе */}
+          <Section style={sectionStyle}>
+            {/* Верхняя полоса как отдельная таблица для лучшей совместимости */}
+            <table
+              width="100%"
+              cellPadding="0"
+              cellSpacing="0"
+              border={0}
+              style={{ borderCollapse: "collapse" }}
+            >
+              <tr>
+                <td
+                  style={{
+                    height: "6px",
+                    background: `linear-gradient(to right, ${highlightColor}, ${accentColor}, ${highlightColor})`,
+                    opacity: "0.8",
+                  }}
+                ></td>
+              </tr>
+            </table>
 
+            {/* Содержимое секции с отступами */}
+            <div style={sectionContentStyle}>
               <Row>
                 <Column>
-                  <Text className="text-white text-2xl font-bold mb-8">
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      margin: "0 0 32px 0",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                    }}
+                  >
                     Состав заказа
                   </Text>
 
                   {items.map((item) => (
-                    <Row
+                    <div
                       key={item.id}
-                      className="mb-5 p-5 bg-gradient-from/30 rounded-xl border border-blue-500/20"
+                      style={{
+                        marginBottom: "20px",
+                        padding: "20px",
+                        backgroundColor: primaryColor,
+                        borderRadius: "12px",
+                        border: `1px solid ${primaryBorderColor}`,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                      }}
                     >
-                      <Column>
-                        <Text className="text-white text-lg font-medium m-0">
-                          {item.name}
-                        </Text>
-                        <div className="flex justify-between items-center mt-3">
-                          <Text className="text-secondary-light text-base m-0">
-                            {formatCurrency(item.price)} × {item.quantity} шт.
-                          </Text>
-                          <Text className="text-blue-400 text-lg font-semibold">
-                            {formatCurrency(item.price * item.quantity)}
-                          </Text>
-                        </div>
-                      </Column>
-                    </Row>
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: "18px",
+                          fontWeight: "500",
+                          margin: "0",
+                        }}
+                      >
+                        {item.name}
+                      </Text>
+                      <div
+                        style={{
+                          marginTop: "12px",
+                        }}
+                      >
+                        <table
+                          width="100%"
+                          cellPadding="0"
+                          cellSpacing="0"
+                          style={{ borderCollapse: "collapse" }}
+                        >
+                          <tr>
+                            <td>
+                              <Text
+                                style={{
+                                  color: secondaryLightColor,
+                                  fontSize: "16px",
+                                  margin: "0",
+                                }}
+                              >
+                                {formatCurrency(item.price)} × {item.quantity}{" "}
+                                шт.
+                              </Text>
+                            </td>
+                            <td align="right">
+                              <Text
+                                style={{
+                                  color: accentLightColor,
+                                  fontSize: "18px",
+                                  fontWeight: "600",
+                                  margin: "0",
+                                }}
+                              >
+                                {formatCurrency(item.price * item.quantity)}
+                              </Text>
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
                   ))}
 
-                  <Hr className="border-t-2 border-blue-500/20 my-8" />
+                  <Hr
+                    style={{
+                      borderTop: `2px solid ${primaryBorderColor}`,
+                      borderBottom: "none",
+                      margin: "32px 0",
+                    }}
+                  />
 
-                  <div className="space-y-4 px-2">
-                    <Row>
-                      <Column>
-                        <Text className="text-secondary-light text-base m-0">
-                          Стоимость товаров:
-                        </Text>
-                      </Column>
-                      <Column className="text-right">
-                        <Text className="text-white text-lg font-medium m-0">
-                          {formatCurrency(subtotal)}
-                        </Text>
-                      </Column>
-                    </Row>
-                    <Row>
-                      <Column>
-                        <Text className="text-secondary-light text-base m-0">
-                          Стоимость доставки:
-                        </Text>
-                      </Column>
-                      <Column className="text-right">
-                        <Text className="text-white text-lg font-medium m-0">
-                          {formatCurrency(deliveryPrice)}
-                        </Text>
-                      </Column>
-                    </Row>
-                    <Row className="mt-6 pt-6 border-t-2 border-blue-500/20">
-                      <Column>
-                        <Text className="text-blue-400 text-xl font-bold m-0">
-                          Итого к оплате:
-                        </Text>
-                      </Column>
-                      <Column className="text-right">
-                        <Text className="text-blue-400 text-3xl font-bold m-0">
-                          {formatCurrency(totalPrice)}
-                        </Text>
-                      </Column>
-                    </Row>
+                  <div style={{ padding: "0 8px" }}>
+                    <table
+                      width="100%"
+                      cellPadding="0"
+                      cellSpacing="0"
+                      style={{ borderCollapse: "collapse" }}
+                    >
+                      <tr>
+                        <td style={{ padding: "8px 0" }}>
+                          <Text
+                            style={{
+                              color: secondaryLightColor,
+                              fontSize: "16px",
+                              margin: "0",
+                            }}
+                          >
+                            Стоимость товаров:
+                          </Text>
+                        </td>
+                        <td align="right" style={{ padding: "8px 0" }}>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontSize: "18px",
+                              fontWeight: "500",
+                              margin: "0",
+                            }}
+                          >
+                            {formatCurrency(subtotal)}
+                          </Text>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: "8px 0" }}>
+                          <Text
+                            style={{
+                              color: secondaryLightColor,
+                              fontSize: "16px",
+                              margin: "0",
+                            }}
+                          >
+                            Стоимость доставки:
+                          </Text>
+                        </td>
+                        <td align="right" style={{ padding: "8px 0" }}>
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontSize: "18px",
+                              fontWeight: "500",
+                              margin: "0",
+                            }}
+                          >
+                            {formatCurrency(deliveryPrice)}
+                          </Text>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td
+                          style={{
+                            borderTop: `2px solid ${primaryBorderColor}`,
+                            paddingTop: "24px",
+                            paddingBottom: "8px",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontSize: "20px",
+                              fontWeight: "700",
+                              margin: "0",
+                            }}
+                          >
+                            Итого к оплате:
+                          </Text>
+                        </td>
+                        <td
+                          align="right"
+                          style={{
+                            borderTop: `2px solid ${primaryBorderColor}`,
+                            paddingTop: "24px",
+                            paddingBottom: "8px",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: highlightColor,
+                              fontSize: "28px",
+                              fontWeight: "700",
+                              margin: "0",
+                              textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                            }}
+                          >
+                            {formatCurrency(totalPrice)}
+                          </Text>
+                        </td>
+                      </tr>
+                    </table>
                   </div>
                 </Column>
               </Row>
-            </Section>
+            </div>
+          </Section>
 
-            {/* Блок с информацией о доставке и оплате */}
-            <Section className="p-8 bg-gradient-from/20 rounded-2xl border-2 border-primary-border/50 hover:border-blue-500/50 transition-all duration-300 relative overflow-hidden w-full mb-8">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-blue-500/30" />
+          {/* Блок с информацией о доставке и оплате */}
+          <Section style={sectionStyle}>
+            {/* Верхняя полоса как отдельная таблица для лучшей совместимости */}
+            <table
+              width="100%"
+              cellPadding="0"
+              cellSpacing="0"
+              border={0}
+              style={{ borderCollapse: "collapse" }}
+            >
+              <tr>
+                <td
+                  style={{
+                    height: "6px",
+                    background: `linear-gradient(to right, ${highlightColor}, ${accentColor}, ${highlightColor})`,
+                    opacity: "0.8",
+                  }}
+                ></td>
+              </tr>
+            </table>
 
-              <Row className="flex items-stretch">
-                <Column className="w-1/2 pr-4">
-                  <div className="flex flex-col p-6 bg-gradient-from/30 rounded-xl border border-blue-500/20 h-full">
-                    <Text className="text-white text-xl font-bold mb-4">
+            {/* Содержимое секции с отступами */}
+            <div style={sectionContentStyle}>
+              <Row>
+                <Column style={{ width: "50%", paddingRight: "16px" }}>
+                  <div
+                    style={{
+                      padding: "24px",
+                      backgroundColor: primaryColor,
+                      borderRadius: "12px",
+                      border: `1px solid ${primaryBorderColor}`,
+                      minHeight: "150px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: "20px",
+                        fontWeight: "700",
+                        margin: "0 0 16px 0",
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                      }}
+                    >
                       Информация о доставке
                     </Text>
-                    <div className="flex flex-col flex-grow">
-                      <Text className="text-blue-400 text-lg mb-2">
-                        {deliveryMethod}
-                      </Text>
-                      <Text className="text-secondary-light text-base">
-                        {deliveryAddress}
-                      </Text>
-                    </div>
+                    <Text
+                      style={{
+                        color: accentLightColor,
+                        fontSize: "18px",
+                        margin: "0 0 8px 0",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {deliveryMethod}
+                    </Text>
+                    <Text
+                      style={{
+                        color: secondaryLightColor,
+                        fontSize: "16px",
+                        margin: "0",
+                      }}
+                    >
+                      {deliveryAddress}
+                    </Text>
                   </div>
                 </Column>
-                <Column className="w-1/2 pl-4">
-                  <div className="flex flex-col p-6 bg-gradient-from/30 rounded-xl border border-blue-500/20 h-full">
-                    <Text className="text-white text-xl font-bold mb-4">
+                <Column style={{ width: "50%", paddingLeft: "16px" }}>
+                  <div
+                    style={{
+                      padding: "24px",
+                      backgroundColor: primaryColor,
+                      borderRadius: "12px",
+                      border: `1px solid ${primaryBorderColor}`,
+                      minHeight: "150px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontSize: "20px",
+                        fontWeight: "700",
+                        margin: "0 0 16px 0",
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                      }}
+                    >
                       Способ оплаты
                     </Text>
-                    <div className="flex flex-col flex-grow">
-                      <Text className="text-blue-400 text-lg">
-                        {paymentMethod}
-                      </Text>
-                    </div>
+                    <Text
+                      style={{
+                        color: accentLightColor,
+                        fontSize: "18px",
+                        margin: "0",
+                        fontWeight: "500",
+                      }}
+                    >
+                      {paymentMethod}
+                    </Text>
                   </div>
                 </Column>
               </Row>
-            </Section>
+            </div>
+          </Section>
 
-            {/* Дополнительная информация и контакты */}
-            <Section className="text-center mt-10">
-              <Text className="text-secondary-light text-lg mb-4">
-                Если у вас возникли вопросы по заказу, свяжитесь с нами:
-              </Text>
-              <Link
-                href="mailto:support@only-pc.ru"
-                className="text-blue-400 hover:text-blue-500 text-xl font-medium no-underline transition-colors duration-300"
-              >
-                support@only-pc.ru
-              </Link>
-              <Text className="text-secondary-dark text-base mt-10">
-                © {new Date().getFullYear()} OnlyPC. Все права защищены.
-              </Text>
-            </Section>
-          </Container>
-        </Body>
-      </Tailwind>
+          {/* Дополнительная информация и контакты */}
+          <Section
+            style={{
+              textAlign: "center",
+              marginTop: "40px",
+              padding: "24px",
+              backgroundColor: gradientFromColor,
+              backgroundImage: `linear-gradient(145deg, ${gradientFromColor}, ${gradientToColor})`,
+              borderRadius: "16px",
+              border: `2px solid ${primaryBorderColor}`,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            }}
+          >
+            <Text
+              style={{
+                color: secondaryLightColor,
+                fontSize: "18px",
+                margin: "0 0 16px 0",
+              }}
+            >
+              Если у вас возникли вопросы по заказу, свяжитесь с нами:
+            </Text>
+            <Link
+              href="mailto:support@only-pc.ru"
+              style={{
+                color: accentLightColor,
+                fontSize: "20px",
+                fontWeight: "500",
+                textDecoration: "none",
+              }}
+            >
+              support@only-pc.ru
+            </Link>
+            <Text
+              style={{
+                color: secondaryDarkColor,
+                fontSize: "16px",
+                margin: "40px 0 0 0",
+              }}
+            >
+              © {new Date().getFullYear()} OnlyPC. Все права защищены.
+            </Text>
+          </Section>
+        </Container>
+      </Body>
     </Html>
   );
 };

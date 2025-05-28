@@ -146,7 +146,8 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gradient-to-br from-primary-lighter/10 to-primary/5 group-hover:shadow-lg transition-all">
                       <Image
                         src={(() => {
-                          const caseSlug = item.buildSnapshot?.components?.case;
+                          const caseSlug =
+                            item.buildSnapshot?.components?.korpusa;
                           if (!caseSlug) {
                             return "/icons/case.svg";
                           }
