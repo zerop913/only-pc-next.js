@@ -348,6 +348,9 @@ export const deliveryAddresses = pgTable("delivery_addresses", {
   city: varchar("city", { length: 100 }).notNull(),
   postalCode: varchar("postal_code", { length: 20 }).notNull(),
   streetAddress: text("street_address").notNull(),
+  deliveryMethodId: integer("delivery_method_id").references(
+    () => deliveryMethods.id
+  ),
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -396,6 +399,7 @@ export const orderItems = pgTable("order_items", {
     .notNull(),
   buildId: integer("build_id").references(() => pcBuilds.id),
   buildSnapshot: jsonb("build_snapshot"), // Снимок сборки на момент заказа
+  quantity: integer("quantity").notNull().default(1), // Количество товара
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -474,6 +478,10 @@ export const deliveryAddressesRelations = relations(
     user: one(users, {
       fields: [deliveryAddresses.userId],
       references: [users.id],
+    }),
+    deliveryMethod: one(deliveryMethods, {
+      fields: [deliveryAddresses.deliveryMethodId],
+      references: [deliveryMethods.id],
     }),
   })
 );

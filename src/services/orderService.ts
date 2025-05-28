@@ -45,24 +45,12 @@ export async function createOrder(
   orderData: CreateOrderRequest
 ): Promise<{ order: OrderWithRelations; success: boolean; message?: string }> {
   try {
-    if (!orderData.buildId) {
+    // Проверка наличия товаров в корзине
+    if (!orderData.cartItems || orderData.cartItems.length === 0) {
       return {
         order: {} as OrderWithRelations,
         success: false,
-        message: "ID сборки не указан",
-      };
-    }
-
-    // Получаем сборку
-    const build = await db.query.pcBuilds.findFirst({
-      where: eq(pcBuilds.id, orderData.buildId),
-    });
-
-    if (!build) {
-      return {
-        order: {} as OrderWithRelations,
-        success: false,
-        message: "Сборка не найдена",
+        message: "Корзина пуста",
       };
     }
 
@@ -79,23 +67,36 @@ export async function createOrder(
       };
     }
 
-    // Считаем общую стоимость (сборка + доставка)
-    const buildPrice = parseFloat(build.totalPrice.toString());
-    const deliveryPrice = parseFloat(deliveryMethod.price.toString());
-    const totalPrice = buildPrice + deliveryPrice; // Создаем дату в московском времени и форматируем в ISO формат с часовым поясом
+    const deliveryPrice = deliveryMethod.price;
+    // Преобразуем для расчетов
+    const deliveryPriceNumber = parseFloat(deliveryPrice);
+
+    // Считаем общую стоимость всех товаров в корзине
+    const itemsTotal = orderData.cartItems.reduce((total, item) => {
+      // Базовая цена за единицу товара
+      const basePrice = item.price / (item.quantity || 1);
+      // Умножаем на количество
+      return total + basePrice * (item.quantity || 1);
+    }, 0);
+
+    // Считаем итоговую сумму (товары + доставка)
+    const totalPrice = (itemsTotal + deliveryPriceNumber).toString();
+
     const now = new Date();
     const moscowTime = new Date(now.getTime() + 3 * 60 * 60 * 1000)
       .toISOString()
       .replace("Z", "+03:00");
+
+    // Создаем новый заказ
     const newOrder: NewOrder = {
       orderNumber: generateOrderNumber(),
       userId,
-      statusId: 1, // Новый заказ (id=1 из таблицы статусов)
-      totalPrice: totalPrice.toString(),
+      statusId: orderData.statusId || 1,
+      totalPrice: totalPrice,
       deliveryMethodId: orderData.deliveryMethodId,
       paymentMethodId: orderData.paymentMethodId,
       deliveryAddressId: orderData.deliveryAddressId,
-      deliveryPrice: deliveryMethod.price.toString(),
+      deliveryPrice: deliveryPrice,
       comment: orderData.comment || null,
       createdAt: moscowTime,
       updatedAt: moscowTime,
@@ -107,25 +108,54 @@ export async function createOrder(
       .values(newOrder)
       .returning();
 
-    // Создаем элемент заказа
-    const orderItem: NewOrderItem = {
-      orderId: insertedOrder.id,
-      buildId: build.id,
-      buildSnapshot: {
-        id: build.id,
-        name: build.name,
-        components: build.components,
-        totalPrice: build.totalPrice.toString(),
-      },
-    };
+    // Создаем элементы заказа для каждого товара в корзине
+    const orderItemsToInsert: NewOrderItem[] = [];
 
-    // Вставляем элемент заказа
-    await db.insert(orderItems).values(orderItem);
+    // Обрабатываем каждый элемент корзины
+    for (const item of orderData.cartItems) {
+      const quantity = item.quantity || 1;
+      const basePrice = item.price / quantity; // Цена за единицу
+      const itemTotalPrice = basePrice * quantity; // Общая цена для этого элемента
+
+      // Если это сборка и у нас есть buildId, получаем данные из БД
+      let buildData = null;
+      if (item.type === "build" && orderData.buildId) {
+        buildData = await db.query.pcBuilds.findFirst({
+          where: eq(pcBuilds.id, orderData.buildId),
+        });
+      }
+
+      orderItemsToInsert.push({
+        orderId: insertedOrder.id,
+        buildId: buildData?.id || null,
+        quantity: quantity,
+        buildSnapshot: buildData
+          ? {
+              id: buildData.id,
+              name: buildData.name,
+              components: buildData.components,
+              totalPrice: basePrice.toString(), // Сохраняем базовую цену за единицу
+            }
+          : {
+              id: typeof item.id === "number" ? item.id : 0,
+              name: item.name,
+              totalPrice: basePrice.toString(), // Сохраняем базовую цену за единицу
+              components: item.components || null,
+              type: item.type || "Товар",
+              image: item.image || null,
+            },
+      });
+    }
+
+    // Вставляем все элементы заказа
+    if (orderItemsToInsert.length > 0) {
+      await db.insert(orderItems).values(orderItemsToInsert);
+    }
 
     // Создаем первую запись в истории заказа
     const historyRecord: NewOrderHistory = {
       orderId: insertedOrder.id,
-      statusId: 1, // Новый заказ
+      statusId: orderData.statusId || 1,
       comment: "Заказ создан",
       userId,
     };
@@ -304,6 +334,36 @@ export async function getOrderById(
         : undefined,
     })),
   } as unknown as OrderWithRelations;
+}
+
+/**
+ * Упрощенная версия получения заказа по ID (используется внутренне)
+ */
+async function getSimpleOrderById(orderId: number) {
+  try {
+    const order = await db.query.orders.findFirst({
+      where: eq(orders.id, orderId),
+      columns: {
+        id: true,
+        orderNumber: true,
+        userId: true,
+        statusId: true,
+        totalPrice: true,
+        deliveryMethodId: true,
+        paymentMethodId: true,
+        deliveryAddressId: true,
+        deliveryPrice: true,
+        comment: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return order;
+  } catch (error) {
+    console.error("Error fetching order by ID:", error);
+    return null;
+  }
 }
 
 /**
@@ -711,6 +771,7 @@ export async function getUserDeliveryAddresses(
       city: address.city,
       postalCode: address.postalCode,
       streetAddress: address.streetAddress,
+      deliveryMethodId: address.deliveryMethodId,
       isDefault: address.isDefault === null ? false : address.isDefault,
     }));
   } catch (error) {
@@ -742,9 +803,7 @@ export async function createDeliveryAddress(
       .where(eq(deliveryAddresses.userId, userId));
 
     const isFirstAddress = existingAddresses[0].count === 0;
-    const isDefault = isFirstAddress ? true : addressData.isDefault;
-
-    // Создаем новый адрес
+    const isDefault = isFirstAddress ? true : addressData.isDefault; // Создаем новый адрес
     const [newAddress] = await db
       .insert(deliveryAddresses)
       .values({
@@ -755,6 +814,7 @@ export async function createDeliveryAddress(
         city: addressData.city,
         postalCode: addressData.postalCode,
         streetAddress: addressData.streetAddress,
+        deliveryMethodId: addressData.deliveryMethodId,
         isDefault,
       })
       .returning();
@@ -769,6 +829,7 @@ export async function createDeliveryAddress(
           city: newAddress.city,
           postalCode: newAddress.postalCode,
           streetAddress: newAddress.streetAddress,
+          deliveryMethodId: newAddress.deliveryMethodId,
           isDefault:
             newAddress.isDefault === null ? false : newAddress.isDefault,
         }
@@ -810,9 +871,7 @@ export async function updateDeliveryAddress(
         .update(deliveryAddresses)
         .set({ isDefault: false })
         .where(eq(deliveryAddresses.userId, userId));
-    }
-
-    // Обновляем адрес
+    } // Обновляем адрес
     await db
       .update(deliveryAddresses)
       .set({
@@ -822,6 +881,7 @@ export async function updateDeliveryAddress(
         city: addressData.city,
         postalCode: addressData.postalCode,
         streetAddress: addressData.streetAddress,
+        deliveryMethodId: addressData.deliveryMethodId,
         isDefault: addressData.isDefault,
         updatedAt: new Date(),
       })
@@ -924,6 +984,36 @@ export async function getOrderByNumber(
     return order;
   } catch (error) {
     console.error("Error fetching order by number:", error);
+    return null;
+  }
+}
+
+/**
+ * Получение метода доставки по ID
+ */
+export async function getDeliveryMethodById(id: number) {
+  try {
+    const method = await db.query.deliveryMethods.findFirst({
+      where: eq(deliveryMethods.id, id),
+    });
+    return method;
+  } catch (error) {
+    console.error("Ошибка получения метода доставки:", error);
+    return null;
+  }
+}
+
+/**
+ * Получение метода оплаты по ID
+ */
+export async function getPaymentMethodById(id: number) {
+  try {
+    const method = await db.query.paymentMethods.findFirst({
+      where: eq(paymentMethods.id, id),
+    });
+    return method;
+  } catch (error) {
+    console.error("Ошибка получения метода оплаты:", error);
     return null;
   }
 }

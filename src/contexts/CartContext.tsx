@@ -51,26 +51,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const addToCart = (item: CartItem) => {
     setCartItems((prevItems) => {
       // Проверяем, есть ли уже такой товар в корзине
-      const exists = prevItems.some((i) => i.id === item.id);
-      if (exists) {
-        // Если товар уже есть в корзине, увеличиваем его количество
+      const existingItem = prevItems.find((i) => i.id === item.id);
+      if (existingItem) {
+        // Если товар уже есть, обновляем количество
+        const newQuantity = (existingItem.quantity || 1) + (item.quantity || 1);
+        // Базовая цена за единицу товара
+        const basePrice = item.price / (item.quantity || 1);
+
         return prevItems.map((cartItem) =>
           cartItem.id === item.id
             ? {
                 ...cartItem,
-                quantity: (cartItem.quantity || 1) + (item.quantity || 1),
-                price: cartItem.price + item.price,
+                quantity: newQuantity,
+                // Устанавливаем новую общую цену
+                price: basePrice * newQuantity,
               }
             : cartItem
         );
       }
-      // Если товара нет, добавляем его с количеством 1 (если не указано иное)
+      // Если товара нет, добавляем его
       return [...prevItems, { ...item, quantity: item.quantity || 1 }];
     });
   };
 
   const removeFromCart = (id: number | string) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const clearCart = () => {
@@ -78,23 +83,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.price, 0);
+    return cartItems.reduce((total, item) => {
+      // Базовая цена за единицу товара
+      const basePrice = item.price / (item.quantity || 1);
+      // Умножаем на количество
+      return total + basePrice * (item.quantity || 1);
+    }, 0);
   };
   const getItemsCount = () => {
-    return cartItems.length;
+    return cartItems.reduce((total, item) => total + (item.quantity || 1), 0);
   };
   const isItemInCart = (id: string | number) => {
     return cartItems.some((item) => item.id.toString() === id.toString());
   };
 
-  const updateItemQuantity = (id: number | string, quantity: number) => {
+  const updateItemQuantity = (id: number | string, newQuantity: number) => {
     setCartItems((prevItems) =>
       prevItems.map((item) =>
         item.id === id
           ? {
               ...item,
-              quantity: quantity,
-              price: (item.price / (item.quantity || 1)) * quantity,
+              quantity: newQuantity,
+              // Устанавливаем новую цену на основе базовой цены за единицу
+              price: (item.price / (item.quantity || 1)) * newQuantity,
             }
           : item
       )

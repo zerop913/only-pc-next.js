@@ -35,18 +35,50 @@ export function OrderDetails({ order }: OrderDetailsProps) {
 
   const statusTranslations: Record<string, string> = {
     1: "Новый",
-    2: "В обработке",
-    3: "Отправлен",
-    4: "Доставлен",
-    5: "Отменён",
+    2: "Подтвержден",
+    3: "Оплачен",
+    4: "В сборке",
+    5: "Отправлен",
+    6: "Доставлен",
+    7: "Отменен",
   };
 
-  // Получаем статус оплаты из истории заказа
-  const paymentStatus = order.history?.some((record) =>
-    record.comment?.includes("Оплачен")
-  )
-    ? "Оплачен"
-    : "Ожидает оплаты";
+  // Форматирование цены в едином стиле
+  const formatPrice = (price: string | number) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("ru-RU", {
+      style: "currency",
+      currency: "RUB",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numPrice);
+  };
+
+  // Преобразование строки цены в число
+  const parsePrice = (price: string | number | undefined): number => {
+    if (typeof price === "undefined") return 0;
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return Number.isFinite(numPrice) ? numPrice : 0;
+  };
+
+  // Расчет общей стоимости товаров (без доставки)
+  const subtotal =
+    order.items?.reduce((total, item) => {
+      // Используем цену из buildSnapshot без модификаций
+      const price = parsePrice(item.buildSnapshot?.totalPrice);
+      // Умножаем на количество
+      return total + price * (item.quantity || 1);
+    }, 0) || 0;
+
+  // Цена доставки
+  const deliveryPrice = parsePrice(order.deliveryMethod?.price);
+
+  // Общая стоимость заказа
+  const totalPrice = subtotal + deliveryPrice;
+
+  // Статус оплаты на основе статуса заказа (3 = "Оплачен")
+  const paymentStatus =
+    order.statusId === 3 || order.statusId > 3 ? "Оплачен" : null;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -90,15 +122,10 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                 <h2 className="text-xl font-semibold text-white">
                   Заказ #{order.orderNumber}
                 </h2>
-                {paymentStatus === "Оплачен" ? (
+                {paymentStatus === "Оплачен" && (
                   <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-sm rounded-full border border-emerald-500/20 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Оплачен</span>
-                  </div>
-                ) : (
-                  <div className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-sm rounded-full border border-amber-500/20 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>Ожидает оплаты</span>
                   </div>
                 )}
               </div>
@@ -135,14 +162,20 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                         {item.buildSnapshot?.name || "Компьютерная сборка"}
                       </div>
                       <div className="text-sm text-white/60 group-hover:text-white/70 mt-1 transition-colors">
-                        Персональный компьютер
+                        {item.quantity > 1 ? `${item.quantity} шт.` : "1 шт."}
                       </div>
                     </div>
                     <div className="text-lg font-medium text-white/90 group-hover:text-white transition-colors">
-                      {parseInt(
-                        item.buildSnapshot?.totalPrice || "0"
-                      ).toLocaleString()}{" "}
-                      <span className="text-sm">₽</span>
+                      {formatPrice(
+                        parseFloat(item.buildSnapshot?.totalPrice || "0") *
+                          (item.quantity || 1)
+                      )}
+                      {item.quantity > 1 && (
+                        <div className="text-xs text-secondary-light mt-1">
+                          {formatPrice(item.buildSnapshot?.totalPrice || "0")} ×{" "}
+                          {item.quantity}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -186,27 +219,22 @@ export function OrderDetails({ order }: OrderDetailsProps) {
               </div>
 
               <div className="p-5 space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-secondary-light">Товары:</span>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Товары:</span>
+                    <span className="text-white">{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/70">Доставка:</span>
                     <span className="text-white">
-                      {(
-                        parseInt(order.totalPrice) -
-                        parseInt(order.deliveryPrice)
-                      ).toLocaleString()}{" "}
-                      ₽
+                      {formatPrice(deliveryPrice)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-secondary-light">Доставка:</span>
+                  <div className="h-px bg-primary-border/50 my-1"></div>
+                  <div className="flex justify-between font-medium">
+                    <span className="text-white">Итого:</span>
                     <span className="text-white">
-                      {parseInt(order.deliveryPrice).toLocaleString()} ₽
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t border-primary-border/30 flex justify-between items-center">
-                    <span className="text-white font-medium">Итого:</span>
-                    <span className="text-xl font-bold text-white">
-                      {parseInt(order.totalPrice).toLocaleString()} ₽
+                      {formatPrice(totalPrice)}
                     </span>
                   </div>
                 </div>

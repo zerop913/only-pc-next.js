@@ -25,6 +25,7 @@ async function getHandler(
         city: address.city,
         postalCode: address.postalCode,
         streetAddress: address.streetAddress,
+        deliveryMethodId: address.deliveryMethodId,
         isDefault: address.isDefault,
       })),
     });
@@ -59,9 +60,7 @@ async function postHandler(
         { error: "Не все обязательные поля заполнены" },
         { status: 400 }
       );
-    }
-
-    // Создаем новый адрес доставки
+    } // Создаем новый адрес доставки
     const address = await createDeliveryAddress(context.currentUserId, {
       userId: context.currentUserId,
       recipientName: addressData.recipientName,
@@ -70,6 +69,7 @@ async function postHandler(
       city: addressData.city,
       postalCode: addressData.postalCode,
       streetAddress: addressData.streetAddress,
+      deliveryMethodId: addressData.deliveryMethodId || null,
       isDefault: addressData.isDefault === true,
     });
 

@@ -37,6 +37,7 @@ export interface DeliveryAddress {
   city: string;
   postalCode: string;
   streetAddress: string;
+  deliveryMethodId: number | null;
   isDefault: boolean;
 }
 
@@ -45,6 +46,7 @@ export interface OrderItem {
   id: number;
   orderId: number;
   buildId: number | null;
+  quantity: number;
   buildSnapshot: {
     id: number;
     name: string;
@@ -92,13 +94,28 @@ export interface OrderWithRelations extends OrderBase {
   history?: OrderHistoryRecord[];
 }
 
+// Элемент корзины для создания заказа
+export interface CartItemForOrder {
+  id: number | string;
+  name: string;
+  price: number;
+  quantity?: number;
+  image?: string;
+  type?: string;
+  components?: Record<string, any>;
+}
+
 // Запрос на создание заказа
 export interface CreateOrderRequest {
   buildId?: number;
   deliveryMethodId: number;
   paymentMethodId: number;
   deliveryAddressId: number;
+  statusId?: number; // Статус заказа (опциональный)
+  paidAt?: string; // Дата и время оплаты (опциональный)
+  paymentStatus?: string; // Статус оплаты (опциональный)
   comment?: string;
+  cartItems?: CartItemForOrder[]; // Элементы корзины
 }
 
 // Запрос на обновление статуса заказа

@@ -9,8 +9,10 @@ import {
   AlertCircle,
   Search,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import Button from "@/components/common/Button/Button";
+import OrderDetailModal from "./OrderDetailModal";
 
 interface Order {
   id: number;
@@ -27,6 +29,8 @@ export default function OrdersManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -248,7 +252,16 @@ export default function OrdersManagement() {
                       {formatDate(order.date)}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Button className="text-sm py-1 px-3">Подробнее</Button>
+                      <Button
+                        className="text-sm py-1 px-3 flex items-center gap-1"
+                        onClick={() => {
+                          setSelectedOrderId(order.id);
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        <Eye className="w-3 h-3" />
+                        Подробнее
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -257,6 +270,13 @@ export default function OrdersManagement() {
           </div>
         </div>
       )}
+
+      {/* Модальное окно с деталями заказа */}
+      <OrderDetailModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        orderId={selectedOrderId}
+      />
     </div>
   );
 }

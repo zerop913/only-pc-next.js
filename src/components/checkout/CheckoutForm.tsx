@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useCart } from "@/contexts/CartContext";
+import { useCheckout } from "@/contexts/CheckoutContext"; 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import CustomerInfoForm from "./CustomerInfoForm";
@@ -10,14 +11,19 @@ import DeliveryMethodSelector from "./DeliveryMethodSelector";
 import DeliveryAddressForm from "./DeliveryAddressForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 import OrderSummary from "./OrderSummary";
-import { DeliveryMethod, PaymentMethod } from "@/types/order";
+import { DeliveryMethod, PaymentMethod, DeliveryAddress } from "@/types/order";
 
 export default function CheckoutForm() {
   const { cartItems, getTotalPrice, clearCart } = useCart();
+  const { checkoutData, setCheckoutData } = useCheckout();
   const { user } = useAuth();
   const router = useRouter();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userAddresses, setUserAddresses] = useState<DeliveryAddress[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<
+    number | null
+  >(null);
   const [customerInfo, setCustomerInfo] = useState({
     firstName: user?.profile?.firstName || "",
     lastName: user?.profile?.lastName || "",
@@ -34,9 +40,62 @@ export default function CheckoutForm() {
       phoneNumber: customerInfo.phone,
     }));
   }, [customerInfo]);
-
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] =
     useState<DeliveryMethod | null>(null);
+
+  // Обработчик изменения метода доставки с обновлением deliveryMethodId
+  const handleDeliveryMethodChange = (method: DeliveryMethod | null) => {
+    setSelectedDeliveryMethod(method);
+
+    if (method) {
+      // Обновляем deliveryMethodId в адресе
+      setDeliveryAddress((prev) => ({
+        ...prev,
+        deliveryMethodId: method.id,
+      }));
+
+      // Если выбран сохраненный адрес, проверяем, подходит ли он для выбранного метода доставки
+      if (selectedSavedAddressId) {
+        const selectedAddress = userAddresses.find(
+          (addr) => addr.id === selectedSavedAddressId
+        );
+        if (
+          selectedAddress &&
+          selectedAddress.deliveryMethodId !== null &&
+          selectedAddress.deliveryMethodId !== method.id
+        ) {
+          // Если метод доставки адреса не совпадает с выбранным, сбрасываем выбор адреса
+          setSelectedSavedAddressId(null);
+          // Можно показать сообщение пользователю, что адрес не подходит для выбранного метода доставки
+        }
+      }
+
+      // Фильтруем адреса, подходящие для выбранного метода доставки
+      const compatibleAddresses = userAddresses.filter(
+        (addr) =>
+          addr.deliveryMethodId === null || addr.deliveryMethodId === method.id
+      );
+
+      // Если есть совместимые адреса и нет выбранного адреса, выбираем первый подходящий с isDefault=true
+      if (compatibleAddresses.length > 0 && !selectedSavedAddressId) {
+        const defaultAddress = compatibleAddresses.find(
+          (addr) => addr.isDefault
+        );
+        if (defaultAddress) {
+          setSelectedSavedAddressId(defaultAddress.id);
+          setDeliveryAddress({
+            recipientName: defaultAddress.recipientName,
+            phoneNumber: defaultAddress.phoneNumber,
+            city: defaultAddress.city,
+            postalCode: defaultAddress.postalCode,
+            streetAddress: defaultAddress.streetAddress,
+            isDefault: defaultAddress.isDefault,
+            deliveryMethodId: method.id,
+          });
+        }
+      }
+    }
+  };
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod | null>(null);
   const [deliveryAddress, setDeliveryAddress] = useState({
@@ -47,6 +106,7 @@ export default function CheckoutForm() {
     postalCode: "",
     streetAddress: "",
     isDefault: true,
+    deliveryMethodId: null as number | null,
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -55,21 +115,66 @@ export default function CheckoutForm() {
     deliveryAddress: false,
     paymentMethod: false,
   });
-
   useEffect(() => {
     // Если пользователь не авторизован, перенаправляем на страницу входа
     if (!user) {
       router.push("/auth/login?redirect=/checkout");
+    } else {
+      // Загружаем адреса пользователя
+      loadUserAddresses();
     }
-  }, [user, router]); // Обработка отправки формы
-  const handleSubmit = async () => {
-    console.log("Данные формы:", {
-      customerInfo,
-      deliveryAddress,
-      selectedDeliveryMethod,
-      selectedPaymentMethod,
-    });
+  }, [user, router]);
 
+  // Функция загрузки адресов пользователя
+  const loadUserAddresses = async () => {
+    try {
+      const response = await fetch("/api/orders/delivery-addresses");
+      const data = await response.json();
+
+      if (data.addresses && Array.isArray(data.addresses)) {
+        setUserAddresses(data.addresses);
+
+        // Ищем адрес по умолчанию
+        const defaultAddress = data.addresses.find(
+          (addr: DeliveryAddress) => addr.isDefault
+        );
+
+        if (defaultAddress) {
+          setSelectedSavedAddressId(defaultAddress.id);
+          // Заполняем форму данными адреса по умолчанию
+          setDeliveryAddress({
+            recipientName: defaultAddress.recipientName,
+            phoneNumber: defaultAddress.phoneNumber,
+            city: defaultAddress.city,
+            postalCode: defaultAddress.postalCode,
+            streetAddress: defaultAddress.streetAddress,
+            isDefault: defaultAddress.isDefault,
+            deliveryMethodId: defaultAddress.deliveryMethodId,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Ошибка при загрузке адресов пользователя:", error);
+    }
+  };
+
+  // Обработчик выбора сохраненного адреса
+  const handleSavedAddressSelect = (addressId: number) => {
+    const selectedAddress = userAddresses.find((addr) => addr.id === addressId);
+    if (selectedAddress) {
+      setSelectedSavedAddressId(addressId);
+      setDeliveryAddress({
+        recipientName: selectedAddress.recipientName,
+        phoneNumber: selectedAddress.phoneNumber,
+        city: selectedAddress.city,
+        postalCode: selectedAddress.postalCode,
+        streetAddress: selectedAddress.streetAddress,
+        isDefault: selectedAddress.isDefault,
+        deliveryMethodId: selectedAddress.deliveryMethodId,
+      });
+    }
+  }; // Обработка отправки формы
+  const handleSubmit = async () => {
     // Подробная проверка полей
     const missingFields = [];
     if (!customerInfo.firstName) missingFields.push("Имя покупателя");
@@ -115,67 +220,86 @@ export default function CheckoutForm() {
       // Формируем полное имя (Фамилия Имя Отчество)
       const fullName =
         `${customerInfo.lastName} ${customerInfo.firstName} ${customerInfo.middleName}`.trim();
+      let addressId;
 
-      // Создаем адрес доставки с полным ФИО
-      const deliveryAddressData = {
-        ...deliveryAddress,
-        recipientName: fullName,
-      };
+      // Если выбран существующий адрес, используем его
+      if (selectedSavedAddressId) {
+        addressId = selectedSavedAddressId;
+      } else {
+        // Если выбран новый адрес, создаём его
+        // Создаем адрес доставки с полным ФИО
+        const deliveryAddressData = {
+          ...deliveryAddress,
+          recipientName: fullName,
+        };
 
-      // Отправляем запрос на создание адреса
-      const addressResponse = await fetch("/api/orders/delivery-addresses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(deliveryAddressData),
-      });
+        // Отправляем запрос на создание адреса
+        const addressResponse = await fetch("/api/orders/delivery-addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(deliveryAddressData),
+        });
 
-      const addressData = await addressResponse.json();
+        const addressData = await addressResponse.json();
 
-      if (!addressResponse.ok || !addressData.success) {
-        throw new Error(addressData.error || "Ошибка при создании адреса");
-      } // Получаем информацию о первом товаре в корзине для создания заказа
+        if (!addressResponse.ok || !addressData.success) {
+          throw new Error(addressData.error || "Ошибка при создании адреса");
+        }
+
+        addressId = addressData.address.id;
+      }
+
+      // Получаем информацию о первом товаре в корзине для создания заказа
       const firstItem = cartItems[0];
-
-      console.log("Данные товара из корзины:", firstItem);
 
       if (!firstItem || !firstItem.id) {
         throw new Error("Некорректные данные товара в корзине");
       }
 
-      // Формируем данные заказа
-      const orderData = {
-        buildId: firstItem.id,
-        deliveryMethodId: selectedDeliveryMethod?.id,
-        paymentMethodId: selectedPaymentMethod?.id,
-        deliveryAddressId: addressData.address.id,
+      // Рассчитываем общую стоимость
+      const subtotal = getTotalPrice();
+      const deliveryPriceNumber = selectedDeliveryMethod?.price 
+        ? parseFloat(selectedDeliveryMethod.price) 
+        : 0;
+      
+      // Обновляем данные в контексте CheckoutContext перед переходом на страницу оплаты
+      setCheckoutData({
+        buildId: Number(firstItem.id),
+        deliveryMethodId: selectedDeliveryMethod?.id || null,
+        deliveryMethod: selectedDeliveryMethod,
+        paymentMethodId: selectedPaymentMethod?.id || null,
+        paymentMethod: selectedPaymentMethod,
+        deliveryAddressId: addressId,
         comment: "",
-      };
-      console.log("Отправляем данные заказа:", orderData);
-
-      // Отправляем запрос на создание заказа
-      const orderResponse = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        subtotal: subtotal,
+        deliveryPrice: deliveryPriceNumber,
+        total: subtotal + deliveryPriceNumber
       });
 
-      const orderResult = await orderResponse.json();
+      // Определяем метод оплаты и перенаправляем на соответствующую страницу
+      let paymentMethodName = "";
 
-      if (!orderResponse.ok || !orderResult.success) {
-        throw new Error(orderResult.error || "Ошибка при создании заказа");
-      } // Очищаем корзину после успешного оформления заказа
-      clearCart();
+      // Определяем метод оплаты по ID
+      if (selectedPaymentMethod?.name.toLowerCase().includes("карт")) {
+        paymentMethodName = "card";
+      } else if (
+        selectedPaymentMethod?.name.toLowerCase().includes("qr") ||
+        selectedPaymentMethod?.name.toLowerCase().includes("сбп")
+      ) {
+        paymentMethodName = "qrcode";
+      } else {
+        // По умолчанию используем карту
+        paymentMethodName = "card";
+      }
 
-      // Перенаправляем на страницу успешного оформления заказа
-      router.push(
-        `/checkout/success?orderNumber=${orderResult.order.orderNumber}`
-      );
+      // Перенаправляем на страницу оплаты - больше не используем параметры URL
+      // вместо этого используем данные из контекста
+      router.push(`/checkout/payment/${paymentMethodName}`);
     } catch (error) {
       console.error("Ошибка при оформлении заказа:", error);
       alert(
         "Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте еще раз."
       );
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -194,23 +318,29 @@ export default function CheckoutForm() {
           customerInfo={customerInfo}
           setCustomerInfo={setCustomerInfo}
           hasError={formErrors.customerInfo}
-        />
-
+        />{" "}
         {/* Способ доставки */}
         <DeliveryMethodSelector
           selectedMethod={selectedDeliveryMethod}
-          setSelectedMethod={setSelectedDeliveryMethod}
+          setSelectedMethod={(value) => {
+            const method =
+              typeof value === "function"
+                ? value(selectedDeliveryMethod)
+                : value;
+            handleDeliveryMethodChange(method);
+          }}
           hasError={formErrors.deliveryMethod}
-        />
-
+        />{" "}
         {/* Адрес доставки */}
         <DeliveryAddressForm
           selectedDeliveryMethod={selectedDeliveryMethod}
           deliveryAddress={deliveryAddress}
           setDeliveryAddress={setDeliveryAddress}
+          savedAddresses={userAddresses}
+          selectedSavedAddressId={selectedSavedAddressId}
+          onSavedAddressSelect={handleSavedAddressSelect}
           hasError={formErrors.deliveryAddress}
         />
-
         {/* Способ оплаты */}
         <PaymentMethodSelector
           selectedMethod={selectedPaymentMethod}

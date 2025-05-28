@@ -24,9 +24,26 @@ async function handler(
         { status: 400 }
       );
     }
+    
+    // Проверяем наличие элементов корзины
+    if (!orderData.cartItems || !Array.isArray(orderData.cartItems) || orderData.cartItems.length === 0) {
+      return NextResponse.json(
+        { error: "Корзина пуста или имеет неверный формат" },
+        { status: 400 }
+      );
+    }
 
-    // Создаем заказ
-    const result = await createOrder(userId, orderData);
+    // Проверяем, оплачен ли заказ
+    const isPaid = orderData.paidAt && orderData.paymentStatus === "paid";
+
+    // Устанавливаем статус заказа в зависимости от оплаты
+    const initialStatusId = isPaid ? 3 : 1; // 3 - Оплачен, 1 - Новый
+
+    // Создаем заказ с указанным статусом
+    const result = await createOrder(userId, {
+      ...orderData,
+      statusId: initialStatusId,
+    });
 
     if (!result.success) {
       return NextResponse.json(

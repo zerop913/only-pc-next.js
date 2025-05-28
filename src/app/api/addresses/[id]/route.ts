@@ -11,7 +11,9 @@ async function patchHandler(
   { params, currentUserId }: { params: { id: string }; currentUserId: number }
 ) {
   try {
-    const addressId = parseInt(params.id, 10);
+    // Используем await для получения params.id в Next.js 14+
+    const id = await params.id;
+    const addressId = parseInt(id, 10);
     if (isNaN(addressId)) {
       return NextResponse.json(
         { error: "Неверный идентификатор адреса" },
@@ -60,7 +62,9 @@ async function deleteHandler(
   { params, currentUserId }: { params: { id: string }; currentUserId: number }
 ) {
   try {
-    const addressId = parseInt(params.id, 10);
+    // Используем await для получения params.id в Next.js 14+
+    const id = await params.id;
+    const addressId = parseInt(id, 10);
     if (isNaN(addressId)) {
       return NextResponse.json(
         { error: "Неверный идентификатор адреса" },

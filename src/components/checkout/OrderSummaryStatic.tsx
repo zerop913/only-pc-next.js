@@ -1,35 +1,27 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  CurrencyDollarIcon,
-  CreditCardIcon,
-  ShoppingBagIcon,
-  TruckIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
-import Link from "next/link";
+import { ShoppingBagIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useCheckout } from "@/contexts/CheckoutContext";
 
-interface OrderSummaryProps {
+interface OrderSummaryStaticProps {
   cartItems: any[];
   subtotal: number;
   deliveryPrice: string;
-  isSubmitting: boolean;
-  onSubmit: () => void;
 }
 
-export default function OrderSummary({
+export default function OrderSummaryStatic({
   cartItems,
   subtotal,
   deliveryPrice,
-  isSubmitting,
-  onSubmit,
-}: OrderSummaryProps) {
-  const deliveryPriceNumber = parseFloat(deliveryPrice) || 0;
-  const total = subtotal + deliveryPriceNumber;
+}: OrderSummaryStaticProps) {
+  const { checkoutData } = useCheckout();
+  
+  // Используем данные из контекста, если они есть, иначе используем переданные параметры
+  const actualSubtotal = checkoutData.subtotal || subtotal;
+  const actualDeliveryPrice = checkoutData.deliveryPrice || parseFloat(deliveryPrice) || 0;
+  const total = actualSubtotal + actualDeliveryPrice;
 
   const getImageUrl = (item: any) => {
     if (!item.image) {
@@ -90,20 +82,18 @@ export default function OrderSummary({
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Основные блоки с суммами */}
+        </div>          {/* Основные блоки с суммами */}
         <div className="space-y-3">
           <div className="flex justify-between items-center text-sm">
             <span className="text-secondary-light">
               Товары ({cartItems.length}):
             </span>
-            <span className="text-white">{subtotal.toLocaleString()} ₽</span>
+            <span className="text-white">{actualSubtotal.toLocaleString()} ₽</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-secondary-light">Доставка:</span>
             <span className="text-white">
-              {deliveryPriceNumber.toLocaleString()} ₽
+              {actualDeliveryPrice.toLocaleString()} ₽
             </span>
           </div>
           <div className="pt-3 border-t border-primary-border/30 flex justify-between items-center">
@@ -111,42 +101,6 @@ export default function OrderSummary({
             <span className="text-xl font-bold text-white">
               {total.toLocaleString()} ₽
             </span>
-          </div>
-        </div>
-
-        {/* Кнопка оформления заказа */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          disabled={isSubmitting}
-          onClick={onSubmit}
-          className={`w-full relative overflow-hidden bg-blue-500/20 hover:bg-blue-500/30 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 group border border-blue-500/30 ${
-            isSubmitting ? "opacity-80 cursor-wait" : ""
-          }`}
-        >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            <CreditCardIcon className="w-5 h-5" />
-            {isSubmitting ? "Оформление..." : "Оформить заказ"}
-          </span>
-        </motion.button>
-
-        {/* Информационные блоки */}
-        <div className="space-y-3 pt-3 text-xs text-secondary-light">
-          <p>
-            Нажимая кнопку "Оформить заказ", вы соглашаетесь с{" "}
-            <Link href="/terms" className="text-blue-400 hover:underline">
-              условиями использования
-            </Link>{" "}
-            и{" "}
-            <Link href="/privacy" className="text-blue-400 hover:underline">
-              политикой конфиденциальности
-            </Link>
-            .
-          </p>
-
-          <div className="flex items-center gap-2">
-            <ShieldCheckIcon className="w-4 h-4 text-blue-400/70" />
-            <span>Безопасная оплата и гарантия качества</span>
           </div>
         </div>
       </div>

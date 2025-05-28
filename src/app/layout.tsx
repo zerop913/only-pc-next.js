@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ConfiguratorProvider } from "@/contexts/ConfiguratorContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { CheckoutProvider } from "@/contexts/CheckoutContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import LoadingState from "@/components/common/LoadingState";
 import "@fontsource/montserrat-alternates";
@@ -27,11 +28,13 @@ export default function RootLayout({
           <LoadingState>
             <FavoritesProvider>
               <CartProvider>
-                <ConfiguratorProvider>
-                  <ModalProvider>
-                    <ClientLayout>{children}</ClientLayout>
-                  </ModalProvider>
-                </ConfiguratorProvider>
+                <CheckoutProvider>
+                  <ConfiguratorProvider>
+                    <ModalProvider>
+                      <ClientLayout>{children}</ClientLayout>
+                    </ModalProvider>
+                  </ConfiguratorProvider>
+                </CheckoutProvider>
               </CartProvider>
             </FavoritesProvider>
           </LoadingState>

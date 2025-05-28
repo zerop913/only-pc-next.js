@@ -7,6 +7,7 @@ import DeleteBuildModal from "@/components/modals/profile/DeleteBuildModal";
 import ConfigurationModal from "@/components/modals/configurator/ConfigurationModal";
 import SaveBuildModal from "@/components/modals/configurator/SaveBuildModal";
 import ReplaceProductModal from "@/components/modals/configurator/ReplaceProductModal";
+import QrCodeHelpModal from "@/components/modals/payment/QrCodeHelpModal";
 import { AnimatePresence } from "framer-motion";
 import { Category } from "@/types/category";
 import { SelectedProduct } from "@/contexts/ConfiguratorContext";
@@ -50,6 +51,7 @@ interface ModalContextType {
   openConfigurationModal: (props: ConfigurationModalProps) => void;
   openSaveBuildModal: (props: SaveBuildModalProps) => void;
   openReplaceProductModal: (props: ReplaceProductModalProps) => void;
+  openQrCodeHelpModal: () => void;
   closeConfigurationModal: () => void;
   closeSaveBuildModal: () => void;
   closeReplaceProductModal: () => void;
@@ -74,6 +76,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     useState<SaveBuildModalProps | null>(null);
   const [replaceProductModal, setReplaceProductModal] =
     useState<ReplaceProductModalProps | null>(null);
+  const [qrCodeHelpModal, setQrCodeHelpModal] = useState<boolean>(false);
 
   const closeModal = () => {
     setEditingBuild(null);
@@ -81,6 +84,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     setConfigurationModal(null);
     setSaveBuildModal(null);
     setReplaceProductModal(null);
+    setQrCodeHelpModal(false);
   };
 
   return (
@@ -102,6 +106,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
           });
         },
         openReplaceProductModal: (props) => setReplaceProductModal(props),
+        openQrCodeHelpModal: () => setQrCodeHelpModal(true),
         closeConfigurationModal: () => setConfigurationModal(null),
         closeSaveBuildModal: () => setSaveBuildModal(null),
         closeReplaceProductModal: () => setReplaceProductModal(null),
@@ -143,6 +148,9 @@ export function ModalProvider({ children }: { children: ReactNode }) {
             key="replace-product-modal"
             {...replaceProductModal}
           />
+        )}
+        {qrCodeHelpModal && (
+          <QrCodeHelpModal key="qrcode-help-modal" onClose={closeModal} />
         )}
       </AnimatePresence>
     </ModalContext.Provider>
