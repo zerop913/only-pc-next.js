@@ -28,14 +28,24 @@ export default function FavoriteCategory({
     }
   }, [favoriteItems]);
 
-  // Обработчик удаления товара из списка
+  // Обработчик удаления товара из списка с анимацией
   const handleRemove = (itemId: number) => {
+    // Оставляем старую реализацию, чтобы сразу обновить UI
     setVisibleItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
-  // Если нет товаров для отображения, не рендерим категорию
+  // Если нет товаров для отображения, возвращаем AnimatePresence с null,
+  // чтобы анимировать исчезновение всей категории
   if (!visibleItems.length) {
-    return null;
+    return (
+      <motion.div
+        initial={{ opacity: 1, height: "auto" }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+      >
+        {null}
+      </motion.div>
+    );
   }
 
   return (
@@ -64,8 +74,11 @@ export default function FavoriteCategory({
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
-              <AnimatePresence>
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4"
+              layout
+            >
+              <AnimatePresence mode="popLayout">
                 {visibleItems.map((item) => (
                   <motion.div
                     key={item.id}
@@ -74,9 +87,16 @@ export default function FavoriteCategory({
                     exit={{
                       opacity: 0,
                       scale: 0.8,
-                      transition: { duration: 0.2 },
+                      y: -10,
+                      transition: { duration: 0.3, ease: "easeInOut" },
                     }}
                     layout
+                    transition={{
+                      type: "spring",
+                      stiffness: 350,
+                      damping: 25,
+                      mass: 1,
+                    }}
                   >
                     <ProductCard
                       favoriteItem={item}
@@ -85,7 +105,7 @@ export default function FavoriteCategory({
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

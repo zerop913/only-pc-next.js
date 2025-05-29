@@ -7,6 +7,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { CheckoutProvider } from "@/contexts/CheckoutContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import LoadingState from "@/components/common/LoadingState";
+import CookieConsent from "@/components/common/CookieConsent/CookieConsent";
 import "@fontsource/montserrat-alternates";
 import "../styles/globals.css";
 
@@ -35,6 +36,7 @@ export default function RootLayout({
                   <ConfiguratorProvider>
                     <ModalProvider>
                       <ClientLayout>{children}</ClientLayout>
+                      <CookieConsent />
                     </ModalProvider>
                   </ConfiguratorProvider>
                 </CheckoutProvider>

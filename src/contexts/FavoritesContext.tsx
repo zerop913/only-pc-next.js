@@ -6,16 +6,25 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { useAuth } from "./AuthContext";
 import { Product } from "@/types/product";
 import { FavoriteItem, FavoritesMap } from "@/types/favorite";
+import {
+  getStandardCookie,
+  setStandardCookie,
+  COOKIE_KEYS,
+} from "@/utils/cookieUtils";
 
 interface FavoritesContextType {
   favorites: FavoritesMap;
   isLoading: boolean;
   addToFavorites: (productId: number) => Promise<void>;
-  removeFromFavorites: (favoriteIdOrProductId: number, isProductId?: boolean) => Promise<void>;
+  removeFromFavorites: (
+    favoriteIdOrProductId: number,
+    isProductId?: boolean
+  ) => Promise<void>;
   clearAllFavorites: () => Promise<void>;
   isFavorite: (productId: number) => boolean;
 }
@@ -29,19 +38,35 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<FavoritesMap>({});
   const [isLoading, setIsLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
-  const [hasMigrated, setHasMigrated] = useState(false); // Добавляем флаг миграции
+  const [hasMigrated, setHasMigrated] = useState(false);
+  
+  // Флаг для отслеживания, были ли уже загружены данные
+  const hasInitializedRef = useRef(false);
 
   // Загрузка избранного при монтировании
-  const fetchFavorites = useCallback(async () => {
+  const fetchFavorites = useCallback(async (force = false) => {
+    // Если данные уже загружены и не требуется принудительная загрузка, пропускаем запрос
+    if (!force && Object.keys(favorites).length > 0 && hasInitializedRef.current) {
+      console.log("Skipping favorites fetch - data already loaded");
+      return;
+    }
+    
     try {
       setIsLoading(true);
       const response = await fetch("/api/favorites");
       const data = await response.json();
+      
       if (response.ok) {
         setFavorites(data.favorites);
+        hasInitializedRef.current = true;
+        
+        // Сохраняем в куки для гостей и быстрого доступа
+        if (!user) {
+          setStandardCookie(COOKIE_KEYS.FAVORITES, data.favorites);
+        }
+
         // Обновляем Set с ID избранных товаров
         const ids = new Set<number>();
-        // Добавляем явную типизацию для items
         Object.values(data.favorites).forEach((categoryItems: any) => {
           if (Array.isArray(categoryItems)) {
             categoryItems.forEach((item: FavoriteItem) => {
@@ -55,14 +80,30 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Error fetching favorites:", error);
+      // Пробуем загрузить из куков при ошибке запроса
+      const cookieFavorites = getStandardCookie(COOKIE_KEYS.FAVORITES);
+      if (cookieFavorites) {
+        setFavorites(cookieFavorites);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, favorites]);
 
+  // Загружаем данные только один раз при монтировании
   useEffect(() => {
-    fetchFavorites();
+    if (!hasInitializedRef.current) {
+      console.log("Initial favorites fetch");
+      fetchFavorites();
+    }
   }, [fetchFavorites]);
+
+  // Обновляем куки при изменении избранного
+  useEffect(() => {
+    if (!user && Object.keys(favorites).length > 0) {
+      setStandardCookie(COOKIE_KEYS.FAVORITES, favorites);
+    }
+  }, [favorites, user]);
 
   // Эффект для отслеживания изменения состояния авторизации
   useEffect(() => {
@@ -79,7 +120,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ temporaryIds }),
             });
-            await fetchFavorites();
+            await fetchFavorites(true); // Принудительная загрузка после миграции
           }
         } catch (error) {
           console.error("Error migrating favorites:", error);
@@ -89,7 +130,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     };
 
     migrateLocalFavorites();
-  }, [user, fetchFavorites, favoriteIds, hasMigrated]); // Добавляем hasMigrated в зависимости
+  }, [user, fetchFavorites, favoriteIds, hasMigrated]);
 
   // Сбрасываем флаг миграции при выходе пользователя
   useEffect(() => {
@@ -109,22 +150,28 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       try {
         let productId: number | undefined;
         let favoriteId: number | undefined;
-        
+
         // Определяем тип идентификатора
         if (isProductId) {
           productId = favoriteIdOrProductId;
         } else {
           favoriteId = favoriteIdOrProductId;
-          
+
           // Найдем productId по favoriteId для обновления локального состояния
           for (const categoryItems of Object.values(favorites)) {
-            const item = categoryItems.find(item => item.id === favoriteId);
+            const item = categoryItems.find((item) => item.id === favoriteId);
             if (item) {
               productId = item.productId;
               break;
             }
           }
         }
+
+        console.log("Removing from favorites:", {
+          favoriteId,
+          productId,
+          isProductId,
+        });
 
         // Оптимистичное обновление: удаляем из локального состояния сразу
         setFavorites((prev) => {
@@ -148,7 +195,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           }
           return newFavorites;
         });
-        
+
         // Обновляем set с ID продуктов
         if (productId) {
           setFavoriteIds((prev) => {
@@ -165,8 +212,11 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify(favoriteId ? { favoriteId } : { productId }),
         });
 
-        // Если запрос не удался, откатываем изменения
-        if (!response.ok) {
+        if (response.ok) {
+          console.log("Successfully removed from favorites");
+        } else {
+          console.error("Failed to remove from favorites, reverting state");
+          // Если запрос не удался, откатываем изменения
           await fetchFavorites();
         }
       } catch (error) {
@@ -176,11 +226,60 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [fetchFavorites]
-  );
-
-  const addToFavorites = useCallback(
+  );  const addToFavorites = useCallback(
     async (productId: number) => {
       try {
+        // Проверяем, уже в избранном или нет
+        const wasInFavorites = isFavorite(productId);
+        console.log(
+          `Adding/removing product ${productId} to/from favorites, current state: ${wasInFavorites ? "in favorites" : "not in favorites"}`
+        );
+
+        // Оптимистично обновляем UI до запроса к серверу
+        if (wasInFavorites) {
+          // Находим favoriteId для этого productId
+          let favoriteIdToRemove: number | undefined;
+          for (const categoryItems of Object.values(favorites)) {
+            const item = categoryItems.find(
+              (item) => item.productId === productId
+            );
+            if (item) {
+              favoriteIdToRemove = item.id;
+              break;
+            }
+          }
+
+          // Немедленно обновляем состояние чтобы UI обновился
+          setFavoriteIds((prev) => {
+            const newIds = new Set(prev);
+            newIds.delete(productId);
+            return newIds;
+          });
+          
+          // Если нашли ID в избранном, сразу обновляем список избранного
+          if (favoriteIdToRemove) {
+            setFavorites((prev) => {
+              const newFavorites: FavoritesMap = {};
+              for (const [categoryId, products] of Object.entries(prev)) {
+                const filteredProducts = products.filter(
+                  (item) => item.id !== favoriteIdToRemove
+                );
+                if (filteredProducts.length > 0) {
+                  newFavorites[Number(categoryId)] = filteredProducts;
+                }
+              }
+              return newFavorites;
+            });
+          }
+        } else {
+          // Временно добавляем в локальное состояние
+          setFavoriteIds((prev) => {
+            const newIds = new Set(prev);
+            newIds.add(productId);
+            return newIds;
+          });
+        }
+
         const response = await fetch("/api/favorites", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -188,14 +287,34 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (response.ok) {
-          // Сразу обновляем состояние после успешного запроса
+          // Обновляем состояние после успешного запроса
+          await fetchFavorites();
+          console.log("Successfully toggled favorite status");
+        } else {
+          console.error("Error response from server when toggling favorite");
+          // В случае ошибки восстанавливаем предыдущее состояние
+          if (wasInFavorites) {
+            setFavoriteIds((prev) => {
+              const newIds = new Set(prev);
+              newIds.add(productId);
+              return newIds;
+            });
+          } else {
+            setFavoriteIds((prev) => {
+              const newIds = new Set(prev);
+              newIds.delete(productId);
+              return newIds;
+            });
+          }
           await fetchFavorites();
         }
       } catch (error) {
         console.error("Error toggling favorite:", error);
+        // В случае ошибки обновляем состояние с сервера
+        await fetchFavorites();
       }
     },
-    [fetchFavorites]
+    [fetchFavorites, favorites, isFavorite]
   );
 
   const clearAllFavorites = useCallback(async () => {
@@ -244,7 +363,7 @@ export const useFavorites = () => {
       "FavoritesContext not found. Make sure you are using FavoritesProvider"
     );
     // Возвращаем базовое состояние вместо выброса ошибки
-  return {
+    return {
       favorites: {},
       isLoading: true,
       addToFavorites: async () => {},

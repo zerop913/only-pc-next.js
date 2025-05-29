@@ -1,6 +1,11 @@
 "use client";
 
 import React, { createContext, useState, useContext, useEffect } from "react";
+import {
+  getStandardCookie,
+  setStandardCookie,
+  COOKIE_KEYS,
+} from "@/utils/cookieUtils";
 
 type CartItem = {
   id: number | string;
@@ -31,22 +36,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Загружаем корзину из localStorage при инициализации
+  // Загружаем корзину из кук при инициализации
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
+    const savedCart = getStandardCookie(COOKIE_KEYS.CART);
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        setCartItems(savedCart);
       } catch (error) {
-        console.error("Ошибка при загрузке корзины:", error);
-        localStorage.removeItem("cart");
+        console.error("Ошибка при загрузке корзины из кук:", error);
+        setStandardCookie(COOKIE_KEYS.CART, []);
+      }
+    } else {
+      // Для совместимости: попробуем загрузить из localStorage, если в куках ничего нет
+      const localStorageCart = localStorage.getItem("cart");
+      if (localStorageCart) {
+        try {
+          const parsedCart = JSON.parse(localStorageCart);
+          setCartItems(parsedCart);
+          // Перенесем данные в куки
+          setStandardCookie(COOKIE_KEYS.CART, parsedCart);
+          // Удалим данные из localStorage для предотвращения рассинхронизации
+          localStorage.removeItem("cart");
+        } catch (error) {
+          console.error("Ошибка при загрузке корзины из localStorage:", error);
+          localStorage.removeItem("cart");
+        }
       }
     }
   }, []);
 
-  // Сохраняем корзину в localStorage при изменении
+  // Сохраняем корзину в куках при изменении
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cartItems));
+    setStandardCookie(COOKIE_KEYS.CART, cartItems);
   }, [cartItems]);
   const addToCart = (item: CartItem) => {
     setCartItems((prevItems) => {

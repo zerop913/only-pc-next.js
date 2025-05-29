@@ -38,7 +38,6 @@ export default function ProductCard({
       `/product/${product.slug}?category=${product.category?.slug || ""}`
     );
   };
-
   const handleRemoveFromFavorites = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -47,17 +46,21 @@ export default function ProductCard({
     try {
       setIsRemoving(true);
 
-      // Используем ID из favoriteItem для удаления из избранного
-      await removeFromFavorites(favoriteItem.id);
+      // Сначала вызываем onRemove для анимации удаления элемента
+      // до фактического удаления из контекста
+      if (onRemove) {
+        onRemove();
+      }
+
+      // Запускаем удаление из API
+      removeFromFavorites(favoriteItem.id);
+
+      // Показываем уведомление
       setNotificationMessage("Товар удален из избранного");
       setShowNotification(true);
 
       setTimeout(() => {
         setShowNotification(false);
-        // Вызываем onRemove после того, как уведомление исчезнет
-        if (onRemove) {
-          onRemove();
-        }
       }, 2000);
     } catch (error) {
       console.error("Error removing from favorites:", error);
@@ -80,11 +83,17 @@ export default function ProductCard({
 
   return (
     <>
+      {" "}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.3 }}
+        exit={{ opacity: 0, scale: 0.9, y: -20 }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 25,
+          mass: 0.8,
+        }}
         onClick={handleClick}
         className="group relative bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden transition-all duration-300 hover:bg-gradient-from/20 hover:border-blue-500/30 cursor-pointer"
       >

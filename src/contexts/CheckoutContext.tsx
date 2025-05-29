@@ -2,6 +2,11 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { DeliveryMethod, PaymentMethod, DeliveryAddress } from "@/types/order";
+import {
+  getStandardCookie,
+  setStandardCookie,
+  COOKIE_KEYS,
+} from "@/utils/cookieUtils";
 
 // Типы для контекста оформления заказа
 interface CheckoutData {
@@ -47,23 +52,51 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [checkoutData, setCheckoutDataState] =
     useState<CheckoutData>(initialCheckoutData);
-
-  // Загружаем данные оформления заказа из localStorage при инициализации
+  // Загружаем данные оформления заказа из куков и localStorage при инициализации
   useEffect(() => {
-    const savedCheckoutData = localStorage.getItem("checkoutData");
-    if (savedCheckoutData) {
+    // Пробуем сначала загрузить из куков
+    const cookieCheckoutData = getStandardCookie(COOKIE_KEYS.CHECKOUT);
+
+    if (cookieCheckoutData) {
       try {
-        const parsedData = JSON.parse(savedCheckoutData);
-        setCheckoutDataState(parsedData);
+        setCheckoutDataState(cookieCheckoutData);
       } catch (error) {
-        console.error("Ошибка при загрузке данных оформления заказа:", error);
-        localStorage.removeItem("checkoutData");
+        console.error(
+          "Ошибка при загрузке данных оформления заказа из куков:",
+          error
+        );
+        setStandardCookie(COOKIE_KEYS.CHECKOUT, initialCheckoutData);
+      }
+    } else {
+      // Для обратной совместимости проверяем localStorage
+      const savedCheckoutData = localStorage.getItem("checkoutData");
+      if (savedCheckoutData) {
+        try {
+          const parsedData = JSON.parse(savedCheckoutData);
+          setCheckoutDataState(parsedData);
+
+          // Переносим данные из localStorage в куки
+          setStandardCookie(COOKIE_KEYS.CHECKOUT, parsedData);
+
+          // Удаляем из localStorage для предотвращения рассинхронизации
+          localStorage.removeItem("checkoutData");
+        } catch (error) {
+          console.error(
+            "Ошибка при загрузке данных оформления заказа из localStorage:",
+            error
+          );
+          localStorage.removeItem("checkoutData");
+        }
       }
     }
   }, []);
 
-  // Сохраняем данные оформления заказа в localStorage при изменении
+  // Сохраняем данные оформления заказа в куки при изменении
   useEffect(() => {
+    // Сохраняем в куки
+    setStandardCookie(COOKIE_KEYS.CHECKOUT, checkoutData);
+
+    // Для обратной совместимости также сохраняем в localStorage
     localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
   }, [checkoutData]);
 
@@ -80,10 +113,12 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({
       return updatedData;
     });
   };
-
   // Функция для очистки данных оформления заказа
   const clearCheckoutData = () => {
     setCheckoutDataState(initialCheckoutData);
+    // Удаляем данные из куков
+    setStandardCookie(COOKIE_KEYS.CHECKOUT, "", { maxAge: 0 });
+    // Очищаем и localStorage для совместимости
     localStorage.removeItem("checkoutData");
   };
 

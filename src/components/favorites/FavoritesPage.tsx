@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { FavoriteItem } from "@/types/favorite";
 import FavoriteCategory from "./FavoriteCategory";
@@ -20,9 +20,18 @@ export default function FavoritesPage() {
   }>({});
   const [totalFavorites, setTotalFavorites] = useState(0);
   const [isClearing, setIsClearing] = useState(false);
+  
+  // Отслеживаем, была ли выполнена обработка данных
+  const processingRef = useRef(false);
 
   useEffect(() => {
-    console.log("Favorites data:", favorites);
+    if (processingRef.current && !isLoading && Object.keys(groupedFavorites).length > 0) {
+      return; // Если данные уже обработаны и отображены, не делаем повторную обработку
+    }
+    
+    processingRef.current = true;
+
+    console.log("Processing favorites data:", favorites);
 
     // Проверяем, что favorites является объектом с ключами и значениями
     if (
@@ -79,24 +88,28 @@ export default function FavoritesPage() {
         console.error("Error grouping favorites array:", error);
         setGroupedFavorites({});
         setTotalFavorites(0);
-      }
-    } else {
+      }    } else {
       console.error("Favorites is neither object nor array:", favorites);
       setGroupedFavorites({});
       setTotalFavorites(0);
     }
-  }, [favorites]);
+  }, [favorites, isLoading]);
 
   // Проверка наличия товаров в избранном
   const hasFavorites = totalFavorites > 0;
-
-  // Функция очистки всех избранных товаров
+  // Функция очистки всех избранных товаров с анимацией
   const handleClearAll = () => {
     setIsClearing(true);
+    
+    // Сначала очищаем локальное состояние для анимации
+    setGroupedFavorites({});
+    setTotalFavorites(0);
+    
+    // Затем вызываем API для очистки на сервере
     setTimeout(() => {
       clearAllFavorites();
       setIsClearing(false);
-    }, 300);
+    }, 500); // Даем время для анимации
   };
 
   if (isLoading) {
@@ -159,21 +172,29 @@ export default function FavoritesPage() {
                 >
                   <TrashIcon className="w-5 h-5" />
                 </motion.button>
-              </div>
-
-              <div className="space-y-4 p-4">
-                <AnimatePresence>
+              </div>              <motion.div className="space-y-4 p-4" layout>
+                <AnimatePresence mode="popLayout">
                   {Object.entries(groupedFavorites).map(
                     ([categoryName, items]) => (
-                      <FavoriteCategory
+                      <motion.div 
                         key={categoryName}
-                        name={categoryName}
-                        favoriteItems={items}
-                      />
+                        layout 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{
+                          layout: { type: "spring", stiffness: 300, damping: 30 }
+                        }}
+                      >
+                        <FavoriteCategory
+                          name={categoryName}
+                          favoriteItems={items}
+                        />
+                      </motion.div>
                     )
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
 
               {/* Нижний блок со ссылкой на каталог */}
               <div className="p-5 border-t border-primary-border/50 flex justify-between items-center">

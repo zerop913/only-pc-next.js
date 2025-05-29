@@ -11,6 +11,11 @@ import { Product } from "@/types/product";
 import { Category } from "@/types/category";
 import CompatibilityCheckModal from "@/components/modals/configurator/CompatibilityCheckModal";
 import { CompatibilityResult } from "@/types/compatibility";
+import {
+  getStandardCookie,
+  setStandardCookie,
+  COOKIE_KEYS,
+} from "@/utils/cookieUtils";
 
 export interface SelectedProduct {
   categoryId: number;
@@ -26,6 +31,8 @@ interface SavedConfiguration {
 // Добавляем константу для времени жизни - 7 дней (в миллисекундах)
 const CONFIG_TTL = 7 * 24 * 60 * 60 * 1000;
 const CONFIG_STORAGE_KEY = "pc-configuration";
+// Используем константу из cookieUtils
+const CONFIG_COOKIE_KEY = COOKIE_KEYS.CONFIGURATOR;
 
 interface ConfiguratorContextType {
   selectedProducts: SelectedProduct[];
@@ -116,11 +123,22 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        const savedConfigStr = localStorage.getItem(CONFIG_STORAGE_KEY);
+        // Сначала пробуем загрузить из куков
+        const cookieConfig = getStandardCookie(
+          CONFIG_COOKIE_KEY
+        ) as SavedConfiguration | null;
 
-        if (savedConfigStr) {
-          const savedConfig = JSON.parse(savedConfigStr) as SavedConfiguration;
+        // Если в куках нет данных, пробуем localStorage для обратной совместимости
+        const savedConfigStr = cookieConfig
+          ? null
+          : localStorage.getItem(CONFIG_STORAGE_KEY);
+        const savedConfig =
+          cookieConfig ||
+          (savedConfigStr
+            ? (JSON.parse(savedConfigStr) as SavedConfiguration)
+            : null);
 
+        if (savedConfig) {
           // Проверяем, не устарели ли данные
           const now = Date.now();
           if (
@@ -135,9 +153,18 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
                 checkConfigurationComplete(savedConfig.products, categories)
               );
             }
+
+            // Если данные были в localStorage, переносим их в куки и удаляем из localStorage
+            if (savedConfigStr && !cookieConfig) {
+              setStandardCookie(CONFIG_COOKIE_KEY, savedConfig, {
+                maxAge: CONFIG_TTL / 1000,
+              });
+              localStorage.removeItem(CONFIG_STORAGE_KEY);
+            }
           } else {
             // Если конфигурация устарела, удаляем её
             localStorage.removeItem(CONFIG_STORAGE_KEY);
+            setStandardCookie(CONFIG_COOKIE_KEY, "", { maxAge: 0 });
           }
         }
       } catch (error) {
@@ -159,12 +186,23 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Сохраняем конфигурацию при изменениях
   useEffect(() => {
-    if (typeof window !== "undefined" && selectedProducts.length > 0) {
-      const configToSave: SavedConfiguration = {
-        products: selectedProducts,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(configToSave));
+    if (typeof window !== "undefined") {
+      if (selectedProducts.length > 0) {
+        const configToSave: SavedConfiguration = {
+          products: selectedProducts,
+          timestamp: Date.now(),
+        };
+        // Сохраняем в куки
+        setStandardCookie(CONFIG_COOKIE_KEY, configToSave, {
+          maxAge: CONFIG_TTL / 1000,
+        });
+        // Для обратной совместимости сохраняем также и в localStorage
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(configToSave));
+      } else {
+        // Если конфигурация пуста, удаляем куки и localStorage
+        setStandardCookie(CONFIG_COOKIE_KEY, "", { maxAge: 0 });
+        localStorage.removeItem(CONFIG_STORAGE_KEY);
+      }
     }
   }, [selectedProducts]);
 

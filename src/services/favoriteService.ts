@@ -21,7 +21,8 @@ export async function addToFavorites(productId: number, userId?: number) {
 
   // Если запись существует, удаляем её
   if (existing.length > 0) {
-    return await removeFromFavorites(productId, userId);
+    const favoriteId = existing[0].id;
+    return await removeFromFavorites(favoriteId, userId);
   }
 
   // Если записи нет, добавляем новую
