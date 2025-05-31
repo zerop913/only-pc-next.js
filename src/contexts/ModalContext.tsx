@@ -4,6 +4,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { PcBuildResponse } from "@/types/pcbuild";
 import EditBuildNameModal from "@/components/modals/profile/EditBuildNameModal";
 import DeleteBuildModal from "@/components/modals/profile/DeleteBuildModal";
+import CookieInfoModal from "@/components/modals/profile/CookieInfoModal";
 import ConfigurationModal from "@/components/modals/configurator/ConfigurationModal";
 import SaveBuildModal from "@/components/modals/configurator/SaveBuildModal";
 import ReplaceProductModal from "@/components/modals/configurator/ReplaceProductModal";
@@ -52,6 +53,7 @@ interface ModalContextType {
   openSaveBuildModal: (props: SaveBuildModalProps) => void;
   openReplaceProductModal: (props: ReplaceProductModalProps) => void;
   openQrCodeHelpModal: () => void;
+  openCookieInfoModal: () => void;
   closeConfigurationModal: () => void;
   closeSaveBuildModal: () => void;
   closeReplaceProductModal: () => void;
@@ -77,6 +79,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const [replaceProductModal, setReplaceProductModal] =
     useState<ReplaceProductModalProps | null>(null);
   const [qrCodeHelpModal, setQrCodeHelpModal] = useState<boolean>(false);
+  const [cookieInfoModal, setCookieInfoModal] = useState<boolean>(false);
 
   const closeModal = () => {
     setEditingBuild(null);
@@ -85,6 +88,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     setSaveBuildModal(null);
     setReplaceProductModal(null);
     setQrCodeHelpModal(false);
+    setCookieInfoModal(false);
   };
 
   return (
@@ -96,6 +100,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
           setDeletingBuild({ build, onConfirm }),
         closeModal,
         openConfigurationModal: (props) => setConfigurationModal(props),
+        openCookieInfoModal: () => setCookieInfoModal(true),
         openSaveBuildModal: (props) => {
           setSaveBuildModal({
             ...props,
@@ -148,9 +153,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
             key="replace-product-modal"
             {...replaceProductModal}
           />
-        )}
+        )}{" "}
         {qrCodeHelpModal && (
           <QrCodeHelpModal key="qrcode-help-modal" onClose={closeModal} />
+        )}
+        {cookieInfoModal && (
+          <CookieInfoModal key="cookie-info-modal" onClose={closeModal} />
         )}
       </AnimatePresence>
     </ModalContext.Provider>

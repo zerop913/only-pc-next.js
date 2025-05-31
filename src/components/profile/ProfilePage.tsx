@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useModal } from "@/contexts/ModalContext";
 import { useSearchParams } from "next/navigation";
 import ProfileInfo from "./ProfileInfo";
 import ProfileEditForm from "./ProfileEditForm";
 import ProfileSecurity from "./ProfileSecurity";
 import ProfileOrders from "./ProfileOrders";
+import CookieSettingsContent from "./CookieSettingsContent";
 import {
   Tabs,
   TabsContent,
@@ -158,14 +160,7 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6 w-full">
-          <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6 shadow-md relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
-            <h2 className="text-xl font-semibold text-white mb-4">Настройки</h2>
-            <p className="text-secondary-light">
-              Раздел находится в разработке. Скоро здесь появятся дополнительные
-              настройки аккаунта.
-            </p>
-          </div>
+          <CookieSettingsContent />
         </TabsContent>
 
         {user.roleId === 1 && (

@@ -39,56 +39,67 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [hasMigrated, setHasMigrated] = useState(false);
-  
+
   // Флаг для отслеживания, были ли уже загружены данные
   const hasInitializedRef = useRef(false);
 
   // Загрузка избранного при монтировании
-  const fetchFavorites = useCallback(async (force = false) => {
-    // Если данные уже загружены и не требуется принудительная загрузка, пропускаем запрос
-    if (!force && Object.keys(favorites).length > 0 && hasInitializedRef.current) {
-      console.log("Skipping favorites fetch - data already loaded");
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      const response = await fetch("/api/favorites");
-      const data = await response.json();
-      
-      if (response.ok) {
-        setFavorites(data.favorites);
-        hasInitializedRef.current = true;
-        
-        // Сохраняем в куки для гостей и быстрого доступа
-        if (!user) {
-          setStandardCookie(COOKIE_KEYS.FAVORITES, data.favorites);
-        }
+  const fetchFavorites = useCallback(
+    async (force = false) => {
+      // Если данные уже загружены и не требуется принудительная загрузка, пропускаем запрос
+      if (
+        !force &&
+        Object.keys(favorites).length > 0 &&
+        hasInitializedRef.current
+      ) {
+        console.log("Skipping favorites fetch - data already loaded");
+        return;
+      }
 
-        // Обновляем Set с ID избранных товаров
-        const ids = new Set<number>();
-        Object.values(data.favorites).forEach((categoryItems: any) => {
-          if (Array.isArray(categoryItems)) {
-            categoryItems.forEach((item: FavoriteItem) => {
-              if (item && item.product && typeof item.product.id === "number") {
-                ids.add(item.product.id);
-              }
-            });
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/favorites");
+        const data = await response.json();
+
+        if (response.ok) {
+          setFavorites(data.favorites);
+          hasInitializedRef.current = true;
+
+          // Сохраняем в куки для гостей и быстрого доступа
+          if (!user) {
+            setStandardCookie(COOKIE_KEYS.FAVORITES, data.favorites);
           }
-        });
-        setFavoriteIds(ids);
+
+          // Обновляем Set с ID избранных товаров
+          const ids = new Set<number>();
+          Object.values(data.favorites).forEach((categoryItems: any) => {
+            if (Array.isArray(categoryItems)) {
+              categoryItems.forEach((item: FavoriteItem) => {
+                if (
+                  item &&
+                  item.product &&
+                  typeof item.product.id === "number"
+                ) {
+                  ids.add(item.product.id);
+                }
+              });
+            }
+          });
+          setFavoriteIds(ids);
+        }
+      } catch (error) {
+        console.error("Error fetching favorites:", error);
+        // Пробуем загрузить из куков при ошибке запроса
+        const cookieFavorites = getStandardCookie(COOKIE_KEYS.FAVORITES);
+        if (cookieFavorites) {
+          setFavorites(cookieFavorites);
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching favorites:", error);
-      // Пробуем загрузить из куков при ошибке запроса
-      const cookieFavorites = getStandardCookie(COOKIE_KEYS.FAVORITES);
-      if (cookieFavorites) {
-        setFavorites(cookieFavorites);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, favorites]);
+    },
+    [user, favorites]
+  );
 
   // Загружаем данные только один раз при монтировании
   useEffect(() => {
@@ -226,7 +237,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [fetchFavorites]
-  );  const addToFavorites = useCallback(
+  );
+  const addToFavorites = useCallback(
     async (productId: number) => {
       try {
         // Проверяем, уже в избранном или нет
@@ -255,7 +267,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
             newIds.delete(productId);
             return newIds;
           });
-          
+
           // Если нашли ID в избранном, сразу обновляем список избранного
           if (favoriteIdToRemove) {
             setFavorites((prev) => {

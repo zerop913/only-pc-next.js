@@ -6,6 +6,7 @@ import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { CheckoutProvider } from "@/contexts/CheckoutContext";
 import { ModalProvider } from "@/contexts/ModalContext";
+import { CookieProvider } from "@/contexts/CookieContext";
 import LoadingState from "@/components/common/LoadingState";
 import CookieConsent from "@/components/common/CookieConsent/CookieConsent";
 import "@fontsource/montserrat-alternates";
@@ -34,10 +35,12 @@ export default function RootLayout({
               <CartProvider>
                 <CheckoutProvider>
                   <ConfiguratorProvider>
-                    <ModalProvider>
-                      <ClientLayout>{children}</ClientLayout>
-                      <CookieConsent />
-                    </ModalProvider>
+                    <CookieProvider>
+                      <ModalProvider>
+                        <ClientLayout>{children}</ClientLayout>
+                        <CookieConsent />
+                      </ModalProvider>
+                    </CookieProvider>
                   </ConfiguratorProvider>
                 </CheckoutProvider>
               </CartProvider>
