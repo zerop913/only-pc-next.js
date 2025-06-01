@@ -162,6 +162,7 @@ export const AuthProvider: React.FC<{
       const errorMessage =
         err instanceof Error ? err.message : "Произошла неизвестная ошибка";
       setError(errorMessage);
+      console.error("Login error:", err);
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);

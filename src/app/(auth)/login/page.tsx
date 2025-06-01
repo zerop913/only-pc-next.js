@@ -46,6 +46,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
+      setLocalError("Пожалуйста, подтвердите, что вы не робот");
       captchaRef.current?.resetCaptcha();
       return;
     }
@@ -75,6 +76,7 @@ export default function LoginPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Произошла ошибка";
       setLocalError(errorMessage);
+      console.error("Login submission error:", err);
       captchaRef.current?.resetCaptcha();
     } finally {
       setIsSubmitting(false);

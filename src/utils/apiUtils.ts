@@ -20,12 +20,26 @@ export function getApiUrl(path: string): string {
 }
 
 /**
- * Обертка для fetch с автоматическим определением URL
+ * Обертка для fetch с автоматическим определением URL и обработкой ошибок
  */
 export async function fetchApi(
   path: string,
   options?: RequestInit
 ): Promise<Response> {
   const url = getApiUrl(path);
-  return fetch(url, options);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.error("API fetch error:", error);
+    throw error;
+  }
 }

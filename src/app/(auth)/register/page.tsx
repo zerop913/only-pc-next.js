@@ -46,7 +46,6 @@ export default function RegisterPage() {
       setCaptchaVerified(false);
     }
   };
-
   const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
       setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
@@ -54,6 +53,8 @@ export default function RegisterPage() {
     }
     try {
       setIsLoading(true);
+      setError(null); // Очищаем предыдущие ошибки
+
       const response = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +80,10 @@ export default function RegisterPage() {
       // Перенаправляем на страницу верификации
       router.push("/verify");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Произошла ошибка");
+      const errorMessage =
+        error instanceof Error ? error.message : "Произошла ошибка";
+      setError(errorMessage);
+      console.error("Registration submission error:", error);
       if (captchaRef.current) {
         captchaRef.current.resetCaptcha();
       }
