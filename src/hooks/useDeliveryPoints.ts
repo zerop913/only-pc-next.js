@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchApi } from "@/utils/apiUtils";
 
 interface DeliveryPoint {
   id: number;
@@ -17,7 +18,7 @@ export function useDeliveryPoints() {
   const fetchDeliveryPoints = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/delivery-points");
+      const response = await fetchApi("/api/delivery-points");
 
       if (!response.ok) {
         throw new Error("Failed to fetch delivery points");
@@ -39,7 +40,7 @@ export function useDeliveryPoints() {
 
   const addDeliveryPoint = async (point: Omit<DeliveryPoint, "id">) => {
     try {
-      const response = await fetch("/api/delivery-points", {
+      const response = await fetchApi("/api/delivery-points", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

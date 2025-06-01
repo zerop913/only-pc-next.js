@@ -6,10 +6,10 @@ import { eq } from "drizzle-orm";
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { id } = await Promise.resolve(context.params);
+    const { id } = await context.params;
     const userId = parseInt(id);
     const updates = await request.json();
 
@@ -108,10 +108,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
     const userId = parseInt(id);
 
     if (isNaN(userId)) {

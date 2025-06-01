@@ -9,14 +9,15 @@ import { orders, orderHistory } from "@/lib/db/schema";
  */
 async function handler(
   request: NextRequest,
-  context: { params: { orderId: string }; currentUserId: number }
+  context: { params: Promise<{ orderId: string }>; currentUserId: number }
 ) {
   try {
     const userId = context.currentUserId;
-    const orderId = parseInt(context.params.orderId);
+    const { orderId } = await context.params;
+    const orderIdNum = parseInt(orderId);
     const { statusId } = await request.json();
 
-    if (isNaN(orderId)) {
+    if (isNaN(orderIdNum)) {
       return NextResponse.json(
         { error: "Некорректный идентификатор заказа" },
         { status: 400 }
@@ -25,7 +26,7 @@ async function handler(
 
     // Получаем заказ с учетом прав доступа (только свои заказы)
     const order = await db.query.orders.findFirst({
-      where: and(eq(orders.id, orderId), eq(orders.userId, userId)),
+      where: and(eq(orders.id, orderIdNum), eq(orders.userId, userId)),
     });
 
     if (!order) {
@@ -38,20 +39,18 @@ async function handler(
     const moscowDate = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
     // Для полей в БД, ожидающих строку, форматируем дату
-    const moscowTimeString = moscowDate.toISOString().replace("Z", "+03:00");
-
-    // Обновляем статус заказа
+    const moscowTimeString = moscowDate.toISOString().replace("Z", "+03:00"); // Обновляем статус заказа
     await db
       .update(orders)
       .set({
         statusId: statusId,
         updatedAt: moscowTimeString, // Используем строку для поля updatedAt
       })
-      .where(eq(orders.id, orderId));
+      .where(eq(orders.id, orderIdNum));
 
     // Добавляем запись в историю заказа
     await db.insert(orderHistory).values({
-      orderId, // Сокращенная запись для orderId: orderId
+      orderId: orderIdNum, // Используем число для orderId
       statusId,
       comment: "Заказ успешно оплачен.",
       userId,

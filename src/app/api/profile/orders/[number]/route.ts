@@ -15,11 +15,11 @@ import { getOrderById } from "@/services/orderService";
  */
 async function handler(
   request: NextRequest,
-  context: { currentUserId: number; params: { number: string } }
+  context: { currentUserId: number; params: Promise<{ number: string }> }
 ) {
   try {
     const userId = context.currentUserId;
-    const { number } = context.params;
+    const { number } = await context.params;
 
     if (!number) {
       return NextResponse.json(

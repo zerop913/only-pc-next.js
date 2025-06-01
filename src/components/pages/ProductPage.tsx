@@ -55,8 +55,6 @@ export default function ProductPage() {
         if (!data || typeof data !== "object") {
           throw new Error("Получены некорректные данные");
         }
-
-        // Проверяем и конвертируем поля
         const product: Product = {
           id: Number(data.id),
           title: String(data.title || ""),
@@ -82,7 +80,8 @@ export default function ProductPage() {
 
         // Загрузка категорий
         try {
-          const catResponse = await fetch(`/api/categories`);
+          const { getApiUrl } = await import("@/utils/apiUtils");
+          const catResponse = await fetch(getApiUrl("/api/categories"));
           const categories = await catResponse.json();
 
           if (!catResponse.ok) {

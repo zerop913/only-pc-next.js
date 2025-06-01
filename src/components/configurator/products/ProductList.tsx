@@ -97,14 +97,10 @@ export default function ProductList({
       </div>
 
       <div className="space-y-4 mt-0">
-        {products.map((product) => (
-          <ProductCard
+        {products.map((product) => (          <ProductCard
             key={product.id}
             product={product}
-            onAddToFavorites={(id) => console.log("Add to favorites:", id)}
-            onAddToConfiguration={(id) =>
-              console.log("Add to configuration:", id)
-            }
+            onAddToFavorites={(id: number) => console.log("Add to favorites:", id)}
           />
         ))}
       </div>

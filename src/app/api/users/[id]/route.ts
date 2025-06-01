@@ -5,12 +5,12 @@ import { withAuth } from "@/lib/auth/middleware";
 async function handler(
   request: NextRequest,
   context: {
-    params: { id?: string };
+    params: Promise<{ id?: string }>;
     currentUserId: number;
   }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
 
     if (!id) {
       return NextResponse.json(

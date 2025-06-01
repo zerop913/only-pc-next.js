@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import useSWR, { preload as swrPreload } from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getApiUrl } from "@/utils/apiUtils";
 import { useCategories } from "./hooks/useCategories";
 import { useProducts } from "./hooks/useProducts";
 import { MobileView } from "./views/MobileView";
@@ -18,7 +19,7 @@ import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { usePreloadData } from "@/hooks/usePreloadData";
 import { usePagination } from "@/hooks/usePagination";
 import { useConfigurator } from "@/contexts/ConfiguratorContext";
-import { DetailedComponent } from "@/types/pcbuild"; // Добавляем импорт DetailedComponent
+import { DetailedComponent } from "@/types/pcbuild";
 
 // Обновляем функцию fetcher для лучшей обработки ошибок
 const fetcher = async (url: string) => {
@@ -51,7 +52,7 @@ const fetcher = async (url: string) => {
 };
 
 // Предзагрузка данных категорий
-swrPreload("/api/categories", fetcher); // Используем swrPreload вместо preload
+swrPreload(getApiUrl("/api/categories"), fetcher); // Используем swrPreload вместо preload
 
 const Categories = () => {
   const router = useRouter();
@@ -64,7 +65,7 @@ const Categories = () => {
 
   // Получаем категории
   const { data: categories = [], isLoading: isCategoriesLoading } = useSWR(
-    "/api/categories",
+    getApiUrl("/api/categories"),
     fetcher
   );
 

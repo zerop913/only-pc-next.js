@@ -58,7 +58,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
       try {
         setIsLoading(true);
-        const response = await fetch("/api/favorites");
+        const { fetchApi } = await import('@/utils/apiUtils');
+        const response = await fetchApi("/api/favorites");
         const data = await response.json();
 
         if (response.ok) {

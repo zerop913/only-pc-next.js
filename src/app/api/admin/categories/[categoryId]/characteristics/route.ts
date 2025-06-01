@@ -11,12 +11,12 @@ import { eq, and, inArray, or } from "drizzle-orm";
 
 async function handler(
   request: NextRequest,
-  { params }: { params: { categoryId: string } }
+  context: { params: Promise<{ categoryId: string }> }
 ) {
   if (request.method === "GET") {
     try {
-      const validParams = await Promise.resolve(params);
-      const parsedCategoryId = parseInt(validParams.categoryId);
+      const { categoryId } = await context.params;
+      const parsedCategoryId = parseInt(categoryId);
 
       if (isNaN(parsedCategoryId)) {
         return NextResponse.json(

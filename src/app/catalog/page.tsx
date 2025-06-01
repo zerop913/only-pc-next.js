@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { PcBuildResponse } from "@/types/pcbuild";
 import { Category } from "@/types/category";
 import { useAuth } from "@/contexts/AuthContext";
+import { getApiUrl } from "@/utils/apiUtils";
 import Link from "next/link";
 import {
   motion,
@@ -240,8 +241,8 @@ export default function CatalogPage() {
     const fetchData = async () => {
       try {
         const [buildsResponse, categoriesResponse] = await Promise.all([
-          fetch("/api/builds"),
-          fetch("/api/categories"),
+          fetch(getApiUrl("/api/builds")),
+          fetch(getApiUrl("/api/categories")),
         ]);
 
         const buildsData = await buildsResponse.json();
@@ -281,7 +282,8 @@ export default function CatalogPage() {
 
     setIsRefreshing(true);
     try {
-      const response = await fetch("/api/builds");
+      const { fetchApi } = await import("@/utils/apiUtils");
+      const response = await fetchApi("/api/builds");
       const data = await response.json();
 
       const enhancedBuilds = (data.builds || []).map(
@@ -565,10 +567,10 @@ export default function CatalogPage() {
           {selectedCategory === "all"
             ? "Все сборки"
             : selectedCategory === "gaming"
-            ? "Игровые сборки"
-            : selectedCategory === "workstation"
-            ? "Рабочие станции"
-            : "Офисные сборки"}
+              ? "Игровые сборки"
+              : selectedCategory === "workstation"
+                ? "Рабочие станции"
+                : "Офисные сборки"}
           <span className="text-secondary-light text-lg font-normal ml-2">
             ({filteredBuilds.length})
           </span>
@@ -593,8 +595,8 @@ export default function CatalogPage() {
             isLoading
               ? "loading"
               : filteredBuilds.length === 0
-              ? "empty"
-              : "content"
+                ? "empty"
+                : "content"
           }
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

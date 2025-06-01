@@ -10,7 +10,8 @@ export const sendOrderConfirmationEmail = async (
   orderId: number
 ): Promise<boolean> => {
   try {
-    const response = await fetch("/api/email/order-confirmation", {
+    const { fetchApi } = await import("@/utils/apiUtils");
+    const response = await fetchApi("/api/email/order-confirmation", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
