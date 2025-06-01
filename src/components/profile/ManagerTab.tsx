@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, KeyRound, ArrowRight } from "lucide-react";
 import Button from "../common/Button/Button";
+import { fetchApi } from "../../utils/apiUtils";
 
 interface ApiResponse {
   success: boolean;
@@ -24,7 +25,7 @@ export default function ManagerTab() {
         "Debug: Attempting manager verification with password:",
         password
       );
-      const response = await fetch("/api/manager/verify", {
+      const response = await fetchApi("/api/manager/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Product } from "@/types/product";
 import { Category } from "@/types/category";
-import { getApiUrl } from "@/utils/apiUtils";
+import { getApiUrl } from "../utils/apiUtils";
 import CompatibilityCheckModal from "@/components/modals/configurator/CompatibilityCheckModal";
 import { CompatibilityResult } from "@/types/compatibility";
 import {

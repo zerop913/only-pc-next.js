@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { User } from "@/contexts/AuthContext";
 import { Mail, Calendar, Hash, MapPin, User as UserIcon } from "lucide-react";
 import ProfileSectionHeader from "./ProfileSectionHeader";
+import { fetchApi } from "../../utils/apiUtils";
 
 interface ProfileInfoProps {
   user: User;
@@ -29,7 +30,7 @@ export default function ProfileInfo({
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch("/api/profile", {
+        const response = await fetchApi("/api/profile", {
           method: "GET",
           credentials: "include",
           cache: "no-store",

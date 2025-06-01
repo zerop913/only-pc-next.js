@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatDate, formatPrice } from "@/lib/utils/formatters";
 import { Loader2, ArrowRight } from "lucide-react";
+import { fetchApi } from "../../utils/apiUtils";
 
 interface Order {
   id: number;
@@ -31,7 +32,7 @@ export default function ProfileOrders() {
     const fetchOrders = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/profile/orders");
+        const response = await fetchApi("/api/profile/orders");
         if (!response.ok) {
           throw new Error("Не удалось загрузить заказы");
         }

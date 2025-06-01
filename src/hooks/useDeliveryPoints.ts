@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchApi } from "@/utils/apiUtils";
+import { fetchApi } from "../utils/apiUtils";
 
 interface DeliveryPoint {
   id: number;

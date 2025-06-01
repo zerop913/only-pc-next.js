@@ -11,6 +11,7 @@ import React, {
 import { useAuth } from "./AuthContext";
 import { Product } from "@/types/product";
 import { FavoriteItem, FavoritesMap } from "@/types/favorite";
+import { fetchApi } from "../utils/apiUtils";
 import {
   getStandardCookie,
   setStandardCookie,
@@ -58,7 +59,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
       try {
         setIsLoading(true);
-        const { fetchApi } = await import('@/utils/apiUtils');
+        const { fetchApi } = await import("../utils/apiUtils");
         const response = await fetchApi("/api/favorites");
         const data = await response.json();
 
@@ -127,7 +128,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
           if (temporaryIds.length > 0) {
             setHasMigrated(true); // Устанавливаем флаг перед миграцией
-            await fetch("/api/favorites/merge", {
+            await fetchApi("/api/favorites/merge", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ temporaryIds }),
@@ -218,7 +219,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Отправляем запрос на сервер
-        const response = await fetch("/api/favorites", {
+        const response = await fetchApi("/api/favorites", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(favoriteId ? { favoriteId } : { productId }),
@@ -293,7 +294,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        const response = await fetch("/api/favorites", {
+        const response = await fetchApi("/api/favorites", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ productId }),
@@ -337,7 +338,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       setFavoriteIds(new Set());
 
       // Отправляем запрос на сервер для очистки всех избранных
-      const response = await fetch("/api/favorites/clear", {
+      const response = await fetchApi("/api/favorites/clear", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });

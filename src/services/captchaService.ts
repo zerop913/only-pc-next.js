@@ -1,6 +1,6 @@
 export async function verifyCaptcha(token: string): Promise<boolean> {
   try {
-    const { fetchApi } = await import('@/utils/apiUtils');
+    const { fetchApi } = await import("../utils/apiUtils");
     const response = await fetchApi("/api/captcha/verify", {
       method: "POST",
       headers: {

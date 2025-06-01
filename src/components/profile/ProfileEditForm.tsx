@@ -6,6 +6,7 @@ import { User } from "@/contexts/AuthContext";
 import { Edit2 } from "lucide-react";
 import Button from "@/components/common/Button/Button";
 import ProfileSectionHeader from "./ProfileSectionHeader";
+import { fetchApi } from "../../utils/apiUtils";
 
 interface ProfileEditFormProps {
   user: User;
@@ -57,11 +58,10 @@ export default function ProfileEditForm({
       city: "",
     },
   });
-
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await fetch("/api/profile", {
+        const response = await fetchApi("/api/profile", {
           method: "GET",
           credentials: "include",
         });
@@ -92,9 +92,8 @@ export default function ProfileEditForm({
   const onSubmit = async (data: ProfileFormValues) => {
     setIsLoading(true);
     setMessage(null);
-
     try {
-      const response = await fetch("/api/profile", {
+      const response = await fetchApi("/api/profile", {
         method: "PUT",
         credentials: "include",
         headers: {
