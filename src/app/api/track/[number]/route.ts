@@ -6,10 +6,10 @@ import { eq } from "drizzle-orm";
 // Получение публичной информации о заказе по номеру заказа (для отслеживания)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { number: string } }
+  context: { params: { number: string } }
 ) {
   try {
-    const orderNumber = params.number;
+    const orderNumber = context.params.number;
     if (!orderNumber) {
       return NextResponse.json(
         { error: "Номер заказа не указан" },
