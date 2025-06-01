@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useCart } from "@/contexts/CartContext";
-import CartBadge from "@/components/pages/Cart/CartBadge";
+import CartBadge from "@/components/common/CartBadge/CartBadge";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -46,8 +46,8 @@ const QuickAction = ({
     <Icon className="w-6 h-6 text-secondary-light mb-2" />
     <span className="text-xs text-secondary-light">{label}</span>
     {count !== undefined && (
-      <span className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-500 rounded-full text-xs text-white">
-        {count}
+      <span className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-xs text-white shadow-sm border border-white/10">
+        {count > 99 ? "99+" : count}
       </span>
     )}
   </motion.button>
@@ -117,7 +117,7 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
     router.push("/favorites");
     onClose();
   };
-  
+
   const handleCartClick = () => {
     router.push("/cart");
     onClose();
@@ -174,11 +174,11 @@ const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
               count={favoritesCount}
               onClick={handleFavoritesClick} // Добавляем обработчик
             />
-            <QuickAction 
-              icon={ShoppingCartIcon} 
-              label="Корзина" 
+            <QuickAction
+              icon={ShoppingCartIcon}
+              label="Корзина"
               count={cartCount > 0 ? cartCount : undefined}
-              onClick={handleCartClick} 
+              onClick={handleCartClick}
             />
             <QuickAction
               icon={UserIcon}

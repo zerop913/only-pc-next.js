@@ -1,12 +1,12 @@
 import { db } from "@/lib/db";
 import { categories, type Category as DBCategory } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { Category } from "@/types/category";
+import { Category, CategoryWithChildren } from "@/types/category";
 import { redis } from "@/lib/redis";
 
 const CACHE_TTL = 3600; // 1 час
 
-export async function getAllCategories(): Promise<Category[]> {
+export async function getAllCategories(): Promise<CategoryWithChildren[]> {
   // Пробуем получить данные из кеша
   const cachedCategories = await redis.get("all_categories");
   if (cachedCategories) {
@@ -15,14 +15,18 @@ export async function getAllCategories(): Promise<Category[]> {
 
   const allCategories = await db.select().from(categories);
 
-  const buildCategoryTree = (parentId: number | null = null): Category[] => {
+  const buildCategoryTree = (
+    parentId: number | null = null
+  ): CategoryWithChildren[] => {
     return allCategories
       .filter((category) => category.parentId === parentId)
       .map((category) => ({
         id: category.id,
         name: category.name,
         slug: category.slug,
+        parentId: category.parentId,
         icon: category.icon || null,
+        productCount: 0, // По умолчанию ставим 0, так как точное количество неизвестно
         children: buildCategoryTree(category.id),
       }));
   };
@@ -37,7 +41,7 @@ export async function getAllCategories(): Promise<Category[]> {
 
 export async function getCategoryByPath(
   pathSegments: string[]
-): Promise<Category | null> {
+): Promise<CategoryWithChildren | null> {
   // Пробуем получить данные из кеша
   const cacheKey = `category_path:${pathSegments.join("/")}`;
   const cachedCategory = await redis.get(cacheKey);
@@ -74,12 +78,16 @@ export async function getCategoryByPath(
     id: currentCategory.id,
     name: currentCategory.name,
     slug: currentCategory.slug,
+    parentId: currentCategory.parentId,
     icon: currentCategory.icon || null,
+    productCount: 0, // По умолчанию ставим 0, так как точное количество неизвестно
     children: children.map((child) => ({
       id: child.id,
       name: child.name,
       slug: child.slug,
+      parentId: child.parentId,
       icon: child.icon || null,
+      productCount: 0, // По умолчанию ставим 0
       children: [],
     })),
   };

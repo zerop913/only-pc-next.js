@@ -69,6 +69,7 @@ export default function ProductPage() {
           characteristics: Array.isArray(data.characteristics)
             ? data.characteristics
             : [],
+          createdAt: data.createdAt || new Date().toISOString(),
         };
 
         // Проверяем обязательные поля

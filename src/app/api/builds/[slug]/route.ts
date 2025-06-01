@@ -154,10 +154,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Обновление сборки
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     // Получаем slug из URL напрямую
     const segments = request.nextUrl.pathname.split("/");
@@ -215,10 +212,7 @@ export async function PUT(
 }
 
 // Удаление сборки
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
     // Получаем slug из URL напрямую
     const segments = request.nextUrl.pathname.split("/");

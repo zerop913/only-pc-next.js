@@ -74,6 +74,7 @@ export async function getFavorites(userId?: number): Promise<FavoritesMap> {
       product_image: string | null;
       product_categoryId: number;
       product_brand: string | null;
+      category_id: number;
       category_name: string;
       category_slug: string;
     };
@@ -92,6 +93,7 @@ export async function getFavorites(userId?: number): Promise<FavoritesMap> {
             product_image: products.image,
             product_categoryId: products.categoryId,
             product_brand: products.brand,
+            category_id: categories.id,
             category_name: categories.name,
             category_slug: categories.slug,
           })
@@ -127,6 +129,7 @@ export async function getFavorites(userId?: number): Promise<FavoritesMap> {
           description: null, // Добавляем отсутствующее поле description
           createdAt: new Date().toISOString(), // Добавляем отсутствующее поле createdAt
           category: {
+            id: Number(item.category_id || 0),
             name: String(item.category_name),
             slug: String(item.category_slug),
           },

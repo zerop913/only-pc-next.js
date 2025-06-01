@@ -17,6 +17,7 @@ import { useFavorites } from "@/contexts/FavoritesContext";
 interface ProductCardProps {
   product: Product;
   onAddToFavorites: (productId: number) => void;
+  onAddToConfiguration?: (productId: number) => void;
 }
 
 export type NotificationType = "success" | "error" | "info";
@@ -24,6 +25,7 @@ export type NotificationType = "success" | "error" | "info";
 export default function ProductCard({
   product,
   onAddToFavorites,
+  onAddToConfiguration,
 }: ProductCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

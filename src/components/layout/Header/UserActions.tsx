@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { Fragment, useState, useEffect } from "react";
 import Link from "next/link";
-// import CartBadge from "@/components/pages/Cart/CartBadge";
+import CartBadge from "@/components/common/CartBadge/CartBadge";
 
 interface ActionButtonProps {
   icon: ElementType;
@@ -136,7 +136,7 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
             isTablet={isTablet}
             onClick={handleCartClick}
           />
-          {/* <CartBadge size="sm" /> */}
+          <CartBadge size="sm" />
         </div>
         {/* Профиль с выпадающим меню */}
         <div className="relative">
@@ -194,7 +194,7 @@ const UserActions = ({ isMobile, isTablet }: UserActionsProps) => {
           isTablet={isTablet}
           onClick={handleCartClick}
         />
-        {/* <CartBadge size={isMobile ? "md" : "sm"} /> */}
+        <CartBadge size={isMobile ? "md" : "sm"} />
       </div>
       <ActionButton
         icon={isAuthenticated ? UserIcon : ArrowRightOnRectangleIcon}

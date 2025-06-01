@@ -199,7 +199,7 @@ export default function FAQPage() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <FAQSection items={section.items} />
+                  <FAQSection title={section.title} items={section.items} />
                 </motion.div>
               )
           )}

@@ -91,20 +91,22 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
       </AnimatePresence>
 
-      {selectedCategory && selectedCategory.children.length > 0 && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="mt-4"
-        >
-          <div className="grid grid-cols-2 gap-2">
-            {selectedCategory.children.map((subcategory) => (
-              <button
-                key={subcategory.id}
-                onClick={() => handleSubcategorySelect(subcategory)}
-                className={`
+      {selectedCategory &&
+        selectedCategory.children &&
+        selectedCategory.children.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4"
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {selectedCategory.children?.map((subcategory) => (
+                <button
+                  key={subcategory.id}
+                  onClick={() => handleSubcategorySelect(subcategory)}
+                  className={`
                   group relative p-4 rounded-lg text-sm border transition-all duration-300 overflow-hidden
                   ${
                     selectedSubcategory?.id === subcategory.id
@@ -112,17 +114,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       : "bg-gradient-from/20 border-primary-border text-secondary-light hover:text-white hover:bg-gradient-from/30"
                   }
                 `}
-              >
-                {selectedSubcategory?.id === subcategory.id && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-blue-500/50" />
-                )}
-                <div className="relative z-10">{subcategory.name}</div>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-blue-500/0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      )}
+                >
+                  {selectedSubcategory?.id === subcategory.id && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-blue-500/50" />
+                  )}
+                  <div className="relative z-10">{subcategory.name}</div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-purple-500/0 to-blue-500/0 opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
     </div>
   );
 };

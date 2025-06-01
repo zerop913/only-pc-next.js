@@ -1,7 +1,9 @@
 import { Product, ProductCharacteristic } from "./product";
 
-export interface FavoriteProduct extends Omit<Product, "characteristics"> {
+export interface FavoriteProduct
+  extends Omit<Product, "characteristics" | "category"> {
   category?: {
+    id: number;
     name: string;
     slug: string;
   };

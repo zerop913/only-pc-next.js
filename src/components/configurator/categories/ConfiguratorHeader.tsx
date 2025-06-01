@@ -189,10 +189,10 @@ const ConfiguratorHeader = ({
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col w-full md:w-auto">
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 w-full md:w-auto scrollbar-thin scrollbar-thumb-primary-border scrollbar-track-transparent">
             <motion.button
               onClick={handleOpenModal}
-              className="flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border"
+              className="flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border whitespace-nowrap"
               whileTap={{ scale: 0.98 }}
             >
               <ChartBarIcon className="w-5 h-5 group-hover:text-white transition-colors duration-300" />
@@ -203,7 +203,7 @@ const ConfiguratorHeader = ({
 
             <Tooltip content={tooltipText} position="bottom">
               <motion.div
-                className={`flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light border border-primary-border cursor-pointer relative ${
+                className={`flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light border border-primary-border cursor-pointer relative whitespace-nowrap ${
                   !isCompatible
                     ? "hover:bg-red-900/20"
                     : "hover:bg-green-900/20"
@@ -228,7 +228,7 @@ const ConfiguratorHeader = ({
             {/* Кнопка проверки совместимости */}
             <motion.button
               onClick={openCompatibilityCheckModal}
-              className="flex-1 md:flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border"
+              className="flex-none flex items-center gap-2 px-3 py-2 bg-gradient-from/20 rounded-lg text-secondary-light group transition-all duration-300 hover:bg-gradient-from/30 border border-primary-border whitespace-nowrap"
               whileTap={{ scale: 0.98 }}
             >
               <CheckBadgeIcon className="w-5 h-5 group-hover:text-white transition-colors duration-300" />

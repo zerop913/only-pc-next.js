@@ -149,6 +149,9 @@ export async function searchProducts({
         description: item.description,
         categoryId: item.categoryId,
         characteristics: [],
+        createdAt: item.createdAt
+          ? String(item.createdAt)
+          : new Date().toISOString(),
       })),
       totalItems: allProducts.length,
       totalPages: Math.ceil(allProducts.length / limit),

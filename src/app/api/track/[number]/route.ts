@@ -62,10 +62,8 @@ export async function GET(
         color: orderData[0].statusColor,
       },
       totalPrice: orderData[0].totalPrice,
-      createdAt:
-        orderData[0].createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt:
-        orderData[0].updatedAt?.toISOString() || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       build: buildInfo,
     };
 
