@@ -6,11 +6,12 @@ import { UpdateOrderStatusRequest } from "@/types/order";
 // Получение информации о заказе (для админа/менеджера)
 async function handler(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { params, currentUserId } = context;
-    const orderId = parseInt(params.id, 10);
+    const { id } = await context.params;
+    const { currentUserId } = context;
+    const orderId = parseInt(id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(
         { error: "Неверный идентификатор заказа" },
@@ -32,11 +33,12 @@ async function handler(
 // Обновление статуса заказа (для админа/менеджера)
 async function patchHandler(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { params, currentUserId } = context;
-    const orderId = parseInt(params.id, 10);
+    const { id } = await context.params;
+    const { currentUserId } = context;
+    const orderId = parseInt(id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(
         { error: "Неверный идентификатор заказа" },

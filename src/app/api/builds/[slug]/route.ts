@@ -156,13 +156,11 @@ export async function GET(request: NextRequest) {
 // Обновление сборки
 export async function PUT(
   request: NextRequest,
-  context: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Получаем slug из URL напрямую
-    const { params } = context;
-    const segments = request.nextUrl.pathname.split("/");
-    const slug = segments[segments.length - 1];
+    // Получаем slug из параметров
+    const { slug } = await context.params;
 
     if (!slug) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });
@@ -218,13 +216,11 @@ export async function PUT(
 // Удаление сборки
 export async function DELETE(
   request: NextRequest,
-  context: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Получаем slug из URL напрямую
-    const { params } = context;
-    const segments = request.nextUrl.pathname.split("/");
-    const slug = segments[segments.length - 1];
+    // Получаем slug из параметров
+    const { slug } = await context.params;
 
     if (!slug) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });

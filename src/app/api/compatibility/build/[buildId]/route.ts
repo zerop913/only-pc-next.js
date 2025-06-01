@@ -3,20 +3,20 @@ import { getBuildCompatibilityResult } from "@/services/compatibilityService";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { buildId: string } }
+  context: { params: Promise<{ buildId: string }> }
 ) {
   try {
-    const { params } = context;
-    const buildId = parseInt(params.buildId);
+    const { buildId } = await context.params;
+    const buildIdNum = parseInt(buildId);
 
-    if (isNaN(buildId)) {
+    if (isNaN(buildIdNum)) {
       return NextResponse.json(
         { error: "Некорректный ID сборки" },
         { status: 400 }
       );
     }
 
-    const result = await getBuildCompatibilityResult(buildId);
+    const result = await getBuildCompatibilityResult(buildIdNum);
 
     if (!result) {
       return NextResponse.json(
