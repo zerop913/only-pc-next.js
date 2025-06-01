@@ -6,11 +6,12 @@ import { eq } from "drizzle-orm";
 // Получение публичной информации о заказе по номеру заказа (для отслеживания)
 export async function GET(
   request: NextRequest,
-  context: { params: { number: string } }
+  { params }: { params: Promise<{ number: string }> }
 ) {
   try {
-    const orderNumber = context.params.number;
-    if (!orderNumber) {
+    const { number } = await params;
+
+    if (!number) {
       return NextResponse.json(
         { error: "Номер заказа не указан" },
         { status: 400 }
@@ -32,7 +33,7 @@ export async function GET(
       })
       .from(orders)
       .leftJoin(orderStatuses, eq(orders.statusId, orderStatuses.id))
-      .where(eq(orders.orderNumber, orderNumber))
+      .where(eq(orders.orderNumber, number))
       .limit(1);
 
     if (orderData.length === 0) {
@@ -62,8 +63,8 @@ export async function GET(
         color: orderData[0].statusColor,
       },
       totalPrice: orderData[0].totalPrice,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: orderData[0].createdAt,
+      updatedAt: orderData[0].updatedAt,
       build: buildInfo,
     };
 
