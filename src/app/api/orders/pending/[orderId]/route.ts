@@ -16,13 +16,14 @@ import {
  */
 async function handler(
   request: NextRequest,
-  context: { params: { orderId: string }; currentUserId: number }
+  context: { params: Promise<{ orderId: string }>; currentUserId: number }
 ) {
   try {
     const userId = context.currentUserId;
-    const orderId = parseInt(context.params.orderId);
+    const { orderId } = await context.params;
+    const orderIdNum = parseInt(orderId);
 
-    if (isNaN(orderId)) {
+    if (isNaN(orderIdNum)) {
       return NextResponse.json(
         { error: "Некорректный идентификатор заказа" },
         { status: 400 }
@@ -31,7 +32,7 @@ async function handler(
 
     // Получаем заказ с учетом прав доступа
     const order = await db.query.orders.findFirst({
-      where: and(eq(orders.id, orderId), eq(orders.userId, userId)),
+      where: and(eq(orders.id, orderIdNum), eq(orders.userId, userId)),
       with: {
         deliveryMethod: true,
         paymentMethod: true,

@@ -8,12 +8,12 @@ import {
 // Обновление адреса
 async function patchHandler(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { params, currentUserId } = context;
+    const { id } = await context.params;
+    const { currentUserId } = context;
     // Используем id из params
-    const id = params.id;
     const addressId = parseInt(id, 10);
     if (isNaN(addressId)) {
       return NextResponse.json(
@@ -60,12 +60,12 @@ async function patchHandler(
 // Удаление адреса
 async function deleteHandler(
   request: NextRequest,
-  context: { params: { id: string }; currentUserId: number }
+  context: { params: Promise<{ id: string }>; currentUserId: number }
 ) {
   try {
-    const { params, currentUserId } = context;
+    const { id } = await context.params;
+    const { currentUserId } = context;
     // Используем id из params
-    const id = params.id;
     const addressId = parseInt(id, 10);
     if (isNaN(addressId)) {
       return NextResponse.json(
