@@ -138,7 +138,8 @@ export async function searchProducts({
     // Применяем пагинацию
     const paginatedProducts = sortedProducts.slice(offset, offset + limit);
 
-    const response: SearchResponse = {      items: paginatedProducts.map((item) => ({
+    const response: SearchResponse = {
+      items: paginatedProducts.map((item) => ({
         id: item.id,
         slug: item.slug,
         title: item.title,
@@ -147,7 +148,6 @@ export async function searchProducts({
         image: item.image,
         description: item.description,
         categoryId: item.categoryId,
-        createdAt: typeof item.createdAt === 'string' ? item.createdAt : item.createdAt?.toISOString() || new Date().toISOString(), // Добавляем createdAt
         characteristics: [],
         createdAt: item.createdAt
           ? String(item.createdAt)
