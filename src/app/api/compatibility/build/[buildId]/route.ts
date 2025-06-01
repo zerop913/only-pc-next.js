@@ -3,9 +3,10 @@ import { getBuildCompatibilityResult } from "@/services/compatibilityService";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { buildId: string } }
+  context: { params: { buildId: string } }
 ) {
   try {
+    const { params } = context;
     const buildId = parseInt(params.buildId);
 
     if (isNaN(buildId)) {

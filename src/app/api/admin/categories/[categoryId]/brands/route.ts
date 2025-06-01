@@ -6,10 +6,11 @@ import { eq, isNotNull, and } from "drizzle-orm";
 
 async function handler(
   request: NextRequest,
-  { params }: { params: { categoryId: string } }
+  context: { params: { categoryId: string } }
 ) {
   if (request.method === "GET") {
     try {
+      const { params } = context;
       const validParams = await Promise.resolve(params);
       const parsedCategoryId = parseInt(validParams.categoryId);
 

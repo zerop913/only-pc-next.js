@@ -1,32 +1,30 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { 
-  compatibilityRules, 
-  compatibilityRuleCategories, 
+import {
+  compatibilityRules,
+  compatibilityRuleCategories,
   compatibilityRuleCharacteristics,
-  compatibilityValues
+  compatibilityValues,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 // GET запрос для получения конкретного правила совместимости по ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { params } = context;
     const id = parseInt(params.id);
 
     // Проверка валидности ID
     if (isNaN(id)) {
-      return NextResponse.json(
-        { error: "Invalid rule ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid rule ID" }, { status: 400 });
     }
 
     // Получаем правило из базы данных
     const rule = await db.query.compatibilityRules.findFirst({
-      where: eq(compatibilityRules.id, id)
+      where: eq(compatibilityRules.id, id),
     });
 
     if (!rule) {
@@ -54,11 +52,13 @@ export async function GET(
         const values = await db
           .select()
           .from(compatibilityValues)
-          .where(eq(compatibilityValues.ruleCharacteristicId, characteristic.id));
+          .where(
+            eq(compatibilityValues.ruleCharacteristicId, characteristic.id)
+          );
 
         return {
           ...characteristic,
-          values
+          values,
         };
       })
     );
@@ -67,7 +67,7 @@ export async function GET(
     const fullRule = {
       ...rule,
       categories,
-      characteristics: characteristicsWithValues
+      characteristics: characteristicsWithValues,
     };
 
     return NextResponse.json(fullRule);
@@ -83,23 +83,21 @@ export async function GET(
 // PUT запрос для обновления правила совместимости
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { params } = context;
     const id = parseInt(params.id);
     const body = await request.json();
 
     // Проверка валидности ID
     if (isNaN(id)) {
-      return NextResponse.json(
-        { error: "Invalid rule ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid rule ID" }, { status: 400 });
     }
 
     // Проверяем существование правила
     const existingRule = await db.query.compatibilityRules.findFirst({
-      where: eq(compatibilityRules.id, id)
+      where: eq(compatibilityRules.id, id),
     });
 
     if (!existingRule) {
@@ -114,8 +112,11 @@ export async function PUT(
       .update(compatibilityRules)
       .set({
         name: body.name || existingRule.name,
-        description: body.description !== undefined ? body.description : existingRule.description,
-        updatedAt: new Date()
+        description:
+          body.description !== undefined
+            ? body.description
+            : existingRule.description,
+        updatedAt: new Date(),
       })
       .where(eq(compatibilityRules.id, id))
       .returning();
@@ -133,22 +134,20 @@ export async function PUT(
 // DELETE запрос для удаления правила совместимости
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { params } = context;
     const id = parseInt(params.id);
 
     // Проверка валидности ID
     if (isNaN(id)) {
-      return NextResponse.json(
-        { error: "Invalid rule ID" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid rule ID" }, { status: 400 });
     }
 
     // Проверяем существование правила
     const existingRule = await db.query.compatibilityRules.findFirst({
-      where: eq(compatibilityRules.id, id)
+      where: eq(compatibilityRules.id, id),
     });
 
     if (!existingRule) {
@@ -159,13 +158,11 @@ export async function DELETE(
     }
 
     // Удаляем правило (каскадное удаление должно быть настроено в базе данных)
-    await db
-      .delete(compatibilityRules)
-      .where(eq(compatibilityRules.id, id));
+    await db.delete(compatibilityRules).where(eq(compatibilityRules.id, id));
 
-    return NextResponse.json(
-      { message: "Compatibility rule deleted successfully" }
-    );
+    return NextResponse.json({
+      message: "Compatibility rule deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting compatibility rule:", error);
     return NextResponse.json(

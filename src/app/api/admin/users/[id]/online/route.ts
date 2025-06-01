@@ -3,9 +3,10 @@ import { redis } from "@/lib/redis";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { params } = context;
     const { id } = await Promise.resolve(params);
     const isOnline = await redis.exists(`user:${id}:online`);
     return NextResponse.json({ isOnline: Boolean(isOnline) });

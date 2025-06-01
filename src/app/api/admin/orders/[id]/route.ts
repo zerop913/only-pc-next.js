@@ -6,9 +6,10 @@ import { UpdateOrderStatusRequest } from "@/types/order";
 // Получение информации о заказе (для админа/менеджера)
 async function handler(
   request: NextRequest,
-  { params, currentUserId }: { params: { id: string }; currentUserId: number }
+  context: { params: { id: string }; currentUserId: number }
 ) {
   try {
+    const { params, currentUserId } = context;
     const orderId = parseInt(params.id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(
@@ -31,9 +32,10 @@ async function handler(
 // Обновление статуса заказа (для админа/менеджера)
 async function patchHandler(
   request: NextRequest,
-  { params, currentUserId }: { params: { id: string }; currentUserId: number }
+  context: { params: { id: string }; currentUserId: number }
 ) {
   try {
+    const { params, currentUserId } = context;
     const orderId = parseInt(params.id, 10);
     if (isNaN(orderId)) {
       return NextResponse.json(

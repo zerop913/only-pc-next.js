@@ -6,9 +6,10 @@ import { eq } from "drizzle-orm";
 // Получение публичной информации о заказе по номеру заказа (для отслеживания)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { number: string } }
+  context: { params: { number: string } }
 ) {
   try {
+    const { params } = context;
     const orderNumber = params.number;
     if (!orderNumber) {
       return NextResponse.json(
@@ -62,10 +63,8 @@ export async function GET(
         color: orderData[0].statusColor,
       },
       totalPrice: orderData[0].totalPrice,
-      createdAt:
-        orderData[0].createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt:
-        orderData[0].updatedAt?.toISOString() || new Date().toISOString(),
+      createdAt: orderData[0].createdAt || new Date().toISOString(),
+      updatedAt: orderData[0].updatedAt || new Date().toISOString(),
       build: buildInfo,
     };
 
