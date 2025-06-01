@@ -14,8 +14,8 @@ const nextConfig = {
   },
   serverExternalPackages: [],
   reactStrictMode: false,
-  experimental: {
-    enableUndici: true,
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 

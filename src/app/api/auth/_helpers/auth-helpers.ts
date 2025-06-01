@@ -77,7 +77,7 @@ async function checkUserRole(
 
 // Пример для использования в route handlers
 export function withAuth(handler: any, requiredRoles?: string[]) {
-  return async (request: NextRequest, context: { params: { id?: string } }) => {
+  return async (request: NextRequest, context: any) => {
     const authResult = await authMiddleware(request, requiredRoles);
 
     if (authResult !== null) {
