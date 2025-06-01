@@ -23,7 +23,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         ))}
       </div>
 
-      {selectedCategory && selectedCategory.children.length > 0 && (
+      {selectedCategory && selectedCategory.children && selectedCategory.children.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

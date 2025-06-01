@@ -1,21 +1,19 @@
 import { db } from "@/lib/db";
 import { categories, type Category as DBCategory } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { Category } from "@/types/category";
+import { Category, CategoryWithChildren } from "@/types/category";
 import { redis } from "@/lib/redis";
 
 const CACHE_TTL = 3600; // 1 час
 
-export async function getAllCategories(): Promise<Category[]> {
+export async function getAllCategories(): Promise<CategoryWithChildren[]> {
   // Пробуем получить данные из кеша
   const cachedCategories = await redis.get("all_categories");
   if (cachedCategories) {
     return JSON.parse(cachedCategories);
   }
 
-  const allCategories = await db.select().from(categories);
-
-  const buildCategoryTree = (parentId: number | null = null): Category[] => {
+  const allCategories = await db.select().from(categories);  const buildCategoryTree = (parentId: number | null = null): CategoryWithChildren[] => {
     return allCategories
       .filter((category) => category.parentId === parentId)
       .map((category) => ({
@@ -23,6 +21,8 @@ export async function getAllCategories(): Promise<Category[]> {
         name: category.name,
         slug: category.slug,
         icon: category.icon || null,
+        parentId: category.parentId,
+        productCount: 0, // Для кеша категорий количество продуктов пока не вычисляем
         children: buildCategoryTree(category.id),
       }));
   };
@@ -69,17 +69,20 @@ export async function getCategoryByPath(
     .select()
     .from(categories)
     .where(eq(categories.parentId, currentCategory.id));
-
-  const categoryData = {
+  const categoryData: CategoryWithChildren = {
     id: currentCategory.id,
     name: currentCategory.name,
     slug: currentCategory.slug,
     icon: currentCategory.icon || null,
+    parentId: currentCategory.parentId,
+    productCount: 0, // Количество продуктов пока не вычисляем
     children: children.map((child) => ({
       id: child.id,
       name: child.name,
       slug: child.slug,
       icon: child.icon || null,
+      parentId: child.parentId,
+      productCount: 0,
       children: [],
     })),
   };

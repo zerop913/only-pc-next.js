@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useCart } from "@/contexts/CartContext";
-import CartBadge from "@/components/pages/Cart/CartBadge";
+// import CartBadge from "@/components/pages/Cart/CartBadge";
 
 interface MobileMenuProps {
   isOpen: boolean;

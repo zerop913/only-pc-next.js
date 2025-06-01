@@ -55,6 +55,7 @@ async function postHandler(
       city: data.city,
       postalCode: data.postalCode,
       streetAddress: data.streetAddress,
+      deliveryMethodId: data.deliveryMethodId || null,
       isDefault: data.isDefault || false,
     };
 
