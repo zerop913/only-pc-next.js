@@ -11,10 +11,10 @@ import { eq, and } from "drizzle-orm";
 // GET запрос для получения конкретного правила совместимости по ID
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { params } = context;
+    const params = await context.params;
     const id = parseInt(params.id);
 
     // Проверка валидности ID
@@ -83,10 +83,10 @@ export async function GET(
 // PUT запрос для обновления правила совместимости
 export async function PUT(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { params } = context;
+    const params = await context.params;
     const id = parseInt(params.id);
     const body = await request.json();
 
@@ -134,10 +134,10 @@ export async function PUT(
 // DELETE запрос для удаления правила совместимости
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { params } = context;
+    const params = await context.params;
     const id = parseInt(params.id);
 
     // Проверка валидности ID
