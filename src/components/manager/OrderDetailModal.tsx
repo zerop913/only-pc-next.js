@@ -9,8 +9,6 @@ import {
   User,
   ShoppingBag,
 } from "lucide-react";
-import AdminOrderEmailPreviewLink from "@/components/admin/AdminOrderEmailPreviewLink";
-import SendOrderEmailButton from "@/components/admin/SendOrderEmailButton";
 
 interface OrderDetailModalProps {
   isOpen: boolean;
@@ -152,22 +150,6 @@ export default function OrderDetailModal({
                         {order.statusName || "Неизвестно"}
                       </span>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Панель действий */}
-              <div className="bg-gradient-from/20 border border-primary-border rounded-lg p-4">
-                {" "}
-                <div className="flex flex-wrap gap-3 items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {order.id && (
-                      <AdminOrderEmailPreviewLink orderId={order.id} />
-                    )}
-                  </div>
-
-                  <div>
-                    {order.id && <SendOrderEmailButton orderId={order.id} />}
                   </div>
                 </div>
               </div>
