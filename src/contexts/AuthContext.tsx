@@ -67,7 +67,8 @@ export const AuthProvider: React.FC<{
   const checkAuth = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/check", {
+      const { fetchApi } = await import("@/utils/apiUtils");
+      const response = await fetchApi("/api/auth/check", {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { Product } from "@/types/product";
 import { Category } from "@/types/category";
+import { getApiUrl } from "@/utils/apiUtils";
 import CompatibilityCheckModal from "@/components/modals/configurator/CompatibilityCheckModal";
 import { CompatibilityResult } from "@/types/compatibility";
 import {
@@ -96,7 +97,7 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/categories");
+        const response = await fetch(getApiUrl("/api/categories"));
         const data = await response.json();
         setCategories(data);
       } catch (error) {
@@ -340,7 +341,7 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       // Получаем результаты проверки совместимости
-      const response = await fetch("/api/compatibility/check", {
+      const response = await fetch(getApiUrl("/api/compatibility/check"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

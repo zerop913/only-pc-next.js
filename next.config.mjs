@@ -17,6 +17,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  env: {
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
+  },
 };
 
 process.env.PORT = process.env.PORT || "5000";
