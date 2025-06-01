@@ -10,6 +10,7 @@ import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "../../../utils/apiUtils";
 
 export default function RegisterPage() {
   const { error, isLoading, setIsLoading, setError } = useAuth();
@@ -51,10 +52,9 @@ export default function RegisterPage() {
       setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
       return;
     }
-
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/register", {
+      const response = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

@@ -53,7 +53,12 @@ export const CaptchaField = forwardRef<
       // Увеличиваем задержку перед повторным выполнением капчи
       timeoutRef.current = setTimeout(() => {
         if (captchaWidgetId.current !== null && grecaptcha?.execute) {
-          grecaptcha.execute(captchaWidgetId.current).catch(console.error);
+          grecaptcha.execute(captchaWidgetId.current).catch((error) => {
+            // Игнорируем ошибки, связанные с отменой или сбросом капчи
+            if (error && error !== null && typeof error === "object") {
+              console.warn("reCAPTCHA execute warning:", error);
+            }
+          });
         }
       }, 1500); // Увеличенная задержка
     }
@@ -140,7 +145,12 @@ export const CaptchaField = forwardRef<
 
         setTimeout(() => {
           if (captchaWidgetId.current !== null && grecaptcha?.execute) {
-            grecaptcha.execute(captchaWidgetId.current).catch(console.error);
+            grecaptcha.execute(captchaWidgetId.current).catch((error) => {
+              // Игнорируем ошибки, связанные с отменой или сбросом капчи
+              if (error && error !== null && typeof error === "object") {
+                console.warn("reCAPTCHA execute warning:", error);
+              }
+            });
           }
         }, 1000);
       }

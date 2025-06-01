@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import { motion } from "framer-motion";
@@ -24,6 +24,7 @@ export const AuthField = ({
 }: AuthFieldProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const uniqueId = useId();
 
   return (
     <motion.div
@@ -32,8 +33,9 @@ export const AuthField = ({
       transition={{ duration: 0.3 }}
       className="mb-4 relative"
     >
+      {" "}
       <label
-        htmlFor={name}
+        htmlFor={uniqueId}
         className="block text-xs sm:text-sm font-medium text-secondary-light mb-1.5 sm:mb-2 opacity-80"
       >
         {label}
@@ -41,7 +43,7 @@ export const AuthField = ({
       <div className="relative">
         <input
           type={type === "password" && showPassword ? "text" : type}
-          id={name}
+          id={uniqueId}
           placeholder={placeholder}
           className={`
             w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg 
