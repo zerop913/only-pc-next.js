@@ -28,19 +28,27 @@ async function handleLogout(request: NextRequest) {
       } catch (error) {
         console.error("Error decoding token during logout:", error);
       }
-    }
+    } // Создаем ответ с перенаправлением на страницу входа
+    // Используем абсолютный URL с origin из переменной окружения или из запроса
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+    const loginUrl = `${baseUrl}/login`.replace(/([^:])\/\/+/g, "$1/");
 
-    // Создаем ответ с перенаправлением на страницу входа
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    console.log("Redirecting to login URL:", loginUrl);
+    const response = NextResponse.redirect(loginUrl);
 
     // Удаляем токен из cookie
     response.cookies.delete("token");
 
     return response;
   } catch (error) {
-    console.error("Logout error:", error);
-    // Даже в случае ошибки перенаправляем на страницу входа
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    console.error("Logout error:", error); // Даже в случае ошибки перенаправляем на страницу входа
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+    const loginUrl = `${baseUrl}/login`.replace(/([^:])\/\/+/g, "$1/");
+
+    console.log("Error logout, redirecting to:", loginUrl);
+    const response = NextResponse.redirect(loginUrl);
     response.cookies.delete("token");
     return response;
   }
