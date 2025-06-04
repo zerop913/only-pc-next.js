@@ -29,19 +29,19 @@ export async function POST(request: NextRequest) {
       }
     } else {
       return NextResponse.json({ error: "Пароль не указан" }, { status: 400 });
-    } // Вызываем API для отправки кода с использованием относительного пути
-    const response = await fetch(`/api/email`, {
+    } // Импортируем функцию для получения правильного API URL
+    const { getApiUrl } = await import("@/utils/apiUtils");
+
+    // Вызываем API для отправки кода с использованием абсолютного пути
+    const apiUrl = getApiUrl("/api/email");
+    console.log("Sending email verification code, API URL:", apiUrl);
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email }),
-      ...(typeof window === "undefined"
-        ? {
-            baseURL:
-              process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin,
-          }
-        : {}),
     });
 
     if (!response.ok) {
