@@ -29,15 +29,19 @@ export async function POST(request: NextRequest) {
       }
     } else {
       return NextResponse.json({ error: "Пароль не указан" }, { status: 400 });
-    }
-
-    // Вызываем API для отправки кода
-    const response = await fetch(`${request.nextUrl.origin}/api/email`, {
+    } // Вызываем API для отправки кода с использованием относительного пути
+    const response = await fetch(`/api/email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email }),
+      ...(typeof window === "undefined"
+        ? {
+            baseURL:
+              process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin,
+          }
+        : {}),
     });
 
     if (!response.ok) {

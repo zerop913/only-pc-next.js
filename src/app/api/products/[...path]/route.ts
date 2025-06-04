@@ -22,10 +22,15 @@ export async function GET(request: NextRequest) {
       .filter(
         (segment) =>
           segment !== "" && segment !== "api" && segment !== "products"
-      );
-
+      ); // Отладочные логи с более точной информацией
     console.log("API Debug: pathSegments", pathSegments);
-    console.log("API Debug: url", url.toString());
+
+    // Проверяем безопасность URL
+    try {
+      console.log("API Debug: url", url.toString());
+    } catch (e) {
+      console.error("API Debug: Invalid URL - ", e);
+    }
 
     // Определяем тип запроса по последнему сегменту пути
     const lastSegment = pathSegments[pathSegments.length - 1];
