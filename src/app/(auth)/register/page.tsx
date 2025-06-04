@@ -23,6 +23,7 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(RegisterSchema),
@@ -32,6 +33,7 @@ export default function RegisterPage() {
       confirmPassword: "",
       captchaToken: "",
     },
+    mode: "onChange", // Добавляем режим валидации при изменении поля
   });
 
   const handleCaptchaChange = (token: string | null) => {
@@ -123,6 +125,7 @@ export default function RegisterPage() {
           register={register}
           errors={errors}
           placeholder="Введите пароль"
+          className="password-field"
         />
 
         <AuthField
@@ -131,7 +134,8 @@ export default function RegisterPage() {
           name="confirmPassword"
           register={register}
           errors={errors}
-          placeholder="Введите пароль"
+          placeholder="Введите пароль еще раз"
+          className="password-field"
         />
 
         <CaptchaField

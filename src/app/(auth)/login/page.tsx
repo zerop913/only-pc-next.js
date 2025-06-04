@@ -121,6 +121,7 @@ export default function LoginPage() {
           register={register}
           errors={errors}
           placeholder="Введите пароль"
+          className="password-field"
         />
 
         <CaptchaField

@@ -45,6 +45,9 @@ export const AuthField = ({
           type={type === "password" && showPassword ? "text" : type}
           id={uniqueId}
           placeholder={placeholder}
+          autoComplete={type === "password" ? "new-password" : "off"}
+          spellCheck="false"
+          autoCorrect="off"
           className={`
             w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg 
             bg-gradient-from/10 
