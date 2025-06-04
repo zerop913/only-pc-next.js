@@ -33,14 +33,21 @@ export default function VerifyPage() {
       // Если таймер еще не истек, используем оставшееся время
       if (remaining > 0) {
         initialTimeLeft = remaining;
+        console.log(
+          "Используем оставшееся время таймера:",
+          remaining,
+          "секунд"
+        );
       } else {
         // Если таймер истек, удаляем его из хранилища
         sessionStorage.removeItem("verificationEndTime");
+        console.log("Таймер истек, устанавливаем новый");
       }
     } else {
       // Если таймера нет, устанавливаем новый
       const newEndTime = Math.floor(Date.now() / 1000) + initialTimeLeft;
       sessionStorage.setItem("verificationEndTime", newEndTime.toString());
+      console.log("Таймер не найден, устанавливаем новый на 5 минут");
     }
 
     setTimeLeft(initialTimeLeft);
@@ -211,9 +218,9 @@ export default function VerifyPage() {
       const response = await fetch("/api/auth/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email,
-          password: loginData.password
+          password: loginData.password,
         }),
       });
 
@@ -221,9 +228,16 @@ export default function VerifyPage() {
         throw new Error("Ошибка отправки кода");
       }
 
-      const newEndTime = Math.floor(Date.now() / 1000) + 600;
+      // Устанавливаем таймер на 5 минут (300 секунд)
+      const newEndTime = Math.floor(Date.now() / 1000) + 300;
       sessionStorage.setItem("verificationEndTime", newEndTime.toString());
-      setTimeLeft(600);
+
+      // Устанавливаем время ожидания и сбрасываем таймер
+      setTimeLeft(300);
+
+      console.log(
+        "Код успешно отправлен повторно. Новый таймер установлен на 5 минут."
+      );
       setError(null);
     } catch (err) {
       setError("Ошибка отправки кода. Попробуйте позже.");
@@ -239,7 +253,7 @@ export default function VerifyPage() {
       setError(null);
 
       const email = sessionStorage.getItem("verificationEmail");
-      
+
       // Логика изменена - пароль уже проверен при отправке кода
       console.log("Verifying code for email:", email);
 

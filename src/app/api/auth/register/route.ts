@@ -29,20 +29,43 @@ export async function POST(request: NextRequest) {
     // Регистрируем пользователя
     const { user } = await registerUser(body);
 
-    // После успешной регистрации отправляем код подтверждения
-    await sendVerificationCode(user.email, request.nextUrl.origin);
+    try {
+      const origin =
+        process.env.NEXT_PUBLIC_API_BASE_URL || request.nextUrl.origin;
+      console.log(
+        "Sending verification code after registration, using origin:",
+        origin
+      );
 
-    return NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          roleId: user.roleId,
+      await sendVerificationCode(user.email, origin);
+
+      return NextResponse.json(
+        {
+          user: {
+            id: user.id,
+            email: user.email,
+            roleId: user.roleId,
+          },
+          message: "Регистрация успешна, проверьте почту для подтверждения",
         },
-        message: "Регистрация успешна, проверьте почту для подтверждения",
-      },
-      { status: 201 }
-    );
+        { status: 201 }
+      );
+    } catch (emailError) {
+      console.error("Error sending verification email:", emailError);
+      // Даже если отправка письма не удалась, считаем регистрацию успешной
+      return NextResponse.json(
+        {
+          user: {
+            id: user.id,
+            email: user.email,
+            roleId: user.roleId,
+          },
+          message:
+            "Регистрация успешна, но возникла проблема с отправкой письма. Попробуйте войти в систему.",
+        },
+        { status: 201 }
+      );
+    }
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

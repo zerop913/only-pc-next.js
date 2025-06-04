@@ -5,14 +5,21 @@ export const verifyCode = async (
   origin?: string
 ): Promise<boolean> => {
   try {
-    // Определяем baseUrl в зависимости от окружения
-    const baseUrl =
-      origin ||
-      (typeof window !== "undefined"
-        ? window.location.origin
-        : "http://localhost:5000");
+    // Импортируем функцию для получения правильного API URL
+    let apiUrl;
 
-    const response = await fetch(`${baseUrl}/api/email`, {
+    if (typeof window === "undefined") {
+      // На сервере используем абсолютный URL из API_BASE_URL
+      const { getApiUrl } = await import("@/utils/apiUtils");
+      apiUrl = getApiUrl("/api/email");
+    } else {
+      // В браузере используем относительный путь
+      apiUrl = "/api/email";
+    }
+
+    console.log("Verifying code using API URL:", apiUrl);
+
+    const response = await fetch(apiUrl, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -28,20 +35,27 @@ export const verifyCode = async (
   }
 };
 
-// Отправка кода подтверждения через SendGrid
+// Отправка кода подтверждения через Resend
 export const sendVerificationCode = async (
   email: string,
   origin?: string
 ): Promise<string> => {
   try {
-    // Определяем baseUrl в зависимости от окружения
-    const baseUrl =
-      origin ||
-      (typeof window !== "undefined"
-        ? window.location.origin
-        : "http://localhost:5000");
+    // Импортируем функцию для получения правильного API URL
+    let apiUrl;
 
-    const response = await fetch(`${baseUrl}/api/email`, {
+    if (typeof window === "undefined") {
+      // На сервере используем абсолютный URL из API_BASE_URL
+      const { getApiUrl } = await import("@/utils/apiUtils");
+      apiUrl = getApiUrl("/api/email");
+    } else {
+      // В браузере используем относительный путь
+      apiUrl = "/api/email";
+    }
+
+    console.log("Sending verification code using API URL:", apiUrl);
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
