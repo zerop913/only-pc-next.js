@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProfileSectionHeader from "./ProfileSectionHeader";
 import { useModal } from "@/contexts/ModalContext";
+import { fetchApi } from "../../utils/apiUtils";
 
 export default function ProfileBuilds() {
   const [builds, setBuilds] = useState<PcBuildResponse[]>([]);
@@ -15,7 +16,7 @@ export default function ProfileBuilds() {
   useEffect(() => {
     const fetchBuilds = async () => {
       try {
-        const response = await fetch("/api/builds/user", {
+        const response = await fetchApi("/api/builds/user", {
           credentials: "include",
         });
         const data = await response.json();

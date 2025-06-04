@@ -243,6 +243,10 @@ export default function VerifyPage() {
       // Логика изменена - пароль уже проверен при отправке кода
       console.log("Verifying code for email:", email);
 
+      if (!email) {
+        throw new Error("Email для верификации не найден");
+      }
+
       const response = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -264,7 +268,10 @@ export default function VerifyPage() {
       sessionStorage.removeItem("verificationEndTime");
       window.location.href = "/profile";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка");
+      const errorMessage =
+        err instanceof Error ? err.message : "Произошла ошибка";
+      setError(errorMessage);
+      console.error("Verification error:", err);
       setCode(["", "", "", "", "", ""]);
       // Фокусируемся на первой ячейке после ошибки
       inputRefs.current[0]?.focus();

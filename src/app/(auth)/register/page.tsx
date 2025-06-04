@@ -10,6 +10,7 @@ import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "../../../utils/apiUtils";
 
 export default function RegisterPage() {
   const { error, isLoading, setIsLoading, setError } = useAuth();
@@ -45,16 +46,16 @@ export default function RegisterPage() {
       setCaptchaVerified(false);
     }
   };
-
   const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
       setCaptchaError("Пожалуйста, подтвердите, что вы не робот");
       return;
     }
-
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/register", {
+      setError(null); // Очищаем предыдущие ошибки
+
+      const response = await fetchApi("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -79,7 +80,10 @@ export default function RegisterPage() {
       // Перенаправляем на страницу верификации
       router.push("/verify");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Произошла ошибка");
+      const errorMessage =
+        error instanceof Error ? error.message : "Произошла ошибка";
+      setError(errorMessage);
+      console.error("Registration submission error:", error);
       if (captchaRef.current) {
         captchaRef.current.resetCaptcha();
       }

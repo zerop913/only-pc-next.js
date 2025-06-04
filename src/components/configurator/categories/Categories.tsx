@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import useSWR, { preload as swrPreload } from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getApiUrl } from "@/utils/apiUtils";
+import { getApiUrl } from "../../../utils/apiUtils";
 import { useCategories } from "./hooks/useCategories";
 import { useProducts } from "./hooks/useProducts";
 import { MobileView } from "./views/MobileView";

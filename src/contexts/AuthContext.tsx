@@ -10,6 +10,7 @@ import React, {
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { LoginSchema, RegisterSchema } from "@/services/authService";
+import { fetchApi } from "../utils/apiUtils";
 
 // Тип данных профиля пользователя
 export interface Profile {
@@ -67,7 +68,7 @@ export const AuthProvider: React.FC<{
   const checkAuth = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { fetchApi } = await import("@/utils/apiUtils");
+      const { fetchApi } = await import("../utils/apiUtils");
       const response = await fetchApi("/api/auth/check", {
         method: "GET",
         credentials: "include",
@@ -140,7 +141,8 @@ export const AuthProvider: React.FC<{
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const { fetchApi } = await import("../utils/apiUtils");
+      const response = await fetchApi("/api/auth/login", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -160,6 +162,7 @@ export const AuthProvider: React.FC<{
       const errorMessage =
         err instanceof Error ? err.message : "Произошла неизвестная ошибка";
       setError(errorMessage);
+      console.error("Login error:", err);
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
@@ -173,7 +176,8 @@ export const AuthProvider: React.FC<{
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const { fetchApi } = await import("../utils/apiUtils");
+      const response = await fetchApi("/api/auth/register", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

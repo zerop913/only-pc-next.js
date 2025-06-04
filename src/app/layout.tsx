@@ -9,6 +9,7 @@ import { ModalProvider } from "@/contexts/ModalContext";
 import { CookieProvider } from "@/contexts/CookieContext";
 import LoadingState from "@/components/common/LoadingState";
 import CookieConsent from "@/components/common/CookieConsent/CookieConsent";
+import GlobalErrorHandler from "@/components/common/GlobalErrorHandler/GlobalErrorHandler";
 import "@fontsource/montserrat-alternates";
 import "../styles/globals.css";
 
@@ -28,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className="min-h-screen bg-primary-dark" suppressHydrationWarning>
-        {" "}
+        <GlobalErrorHandler />
         <AuthProvider>
           <LoadingState>
             <FavoritesProvider>

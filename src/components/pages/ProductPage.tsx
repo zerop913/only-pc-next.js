@@ -80,7 +80,7 @@ export default function ProductPage() {
 
         // Загрузка категорий
         try {
-          const { getApiUrl } = await import("@/utils/apiUtils");
+          const { getApiUrl } = await import("../../utils/apiUtils");
           const catResponse = await fetch(getApiUrl("/api/categories"));
           const categories = await catResponse.json();
 

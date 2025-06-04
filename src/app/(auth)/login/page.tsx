@@ -10,6 +10,7 @@ import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { fetchApi } from "../../../utils/apiUtils";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: any) => {
     if (!data.captchaToken) {
+      setLocalError("Пожалуйста, подтвердите, что вы не робот");
       captchaRef.current?.resetCaptcha();
       return;
     }
@@ -53,7 +55,7 @@ export default function LoginPage() {
       setIsSubmitting(true);
       setLocalError(null);
 
-      const response = await fetch("/api/auth/send-code", {
+      const response = await fetchApi("/api/auth/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -89,6 +91,7 @@ export default function LoginPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Произошла ошибка";
       setLocalError(errorMessage);
+      console.error("Login submission error:", err);
       captchaRef.current?.resetCaptcha();
     } finally {
       setIsSubmitting(false);

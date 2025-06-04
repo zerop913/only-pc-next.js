@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { PcBuildResponse } from "@/types/pcbuild";
 import { Category } from "@/types/category";
 import { useAuth } from "@/contexts/AuthContext";
-import { getApiUrl } from "@/utils/apiUtils";
+import { getApiUrl } from "../../utils/apiUtils";
 import Link from "next/link";
 import {
   motion,
@@ -282,7 +282,7 @@ export default function CatalogPage() {
 
     setIsRefreshing(true);
     try {
-      const { fetchApi } = await import("@/utils/apiUtils");
+      const { fetchApi } = await import("../../utils/apiUtils");
       const response = await fetchApi("/api/builds");
       const data = await response.json();
 

@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+// Функция для создания ответа с CSP заголовками
+function createResponseWithCSP(response: NextResponse): NextResponse {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://www.recaptcha.net",
+    "frame-src 'self' https://www.google.com https://recaptcha.google.com https://www.recaptcha.net",
+    "connect-src 'self' https://www.google.com https://www.gstatic.com https://www.recaptcha.net http://77.232.138.175:5000",
+    "img-src 'self' data: https:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+  ].join("; ");
+
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
+
 // Middleware для проверки авторизации и перенаправления
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -44,7 +62,10 @@ export async function middleware(request: NextRequest) {
   if (path === "/logout") {
     // Если пользователь авторизован, перенаправляем на API для выхода
     // В противном случае перенаправляем на страницу входа
-    return NextResponse.redirect(new URL("/api/auth/logout", request.url));
+    const redirectResponse = NextResponse.redirect(
+      new URL("/api/auth/logout", request.url)
+    );
+    return createResponseWithCSP(redirectResponse);
   }
 
   // Если пользователь авторизован и пытается зайти на страницу входа/регистрации
@@ -56,7 +77,8 @@ export async function middleware(request: NextRequest) {
       );
       await jwtVerify(token, secret);
 
-      return NextResponse.redirect(new URL("/", request.url));
+      const redirectResponse = NextResponse.redirect(new URL("/", request.url));
+      return createResponseWithCSP(redirectResponse);
     } catch (error) {
       console.error("Auth middleware error:", error);
       // В случае ошибки разрешаем доступ к маршрутам входа/регистрации
@@ -65,14 +87,20 @@ export async function middleware(request: NextRequest) {
 
   // Если пользователь пытается зайти на защищенный маршрут без авторизации
   if (isProtectedRoute && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectResponse = NextResponse.redirect(
+      new URL("/login", request.url)
+    );
+    return createResponseWithCSP(redirectResponse);
   }
 
   // Обработка админ-маршрутов
   if (path.startsWith("/admin")) {
     try {
       if (!token) {
-        return NextResponse.redirect(new URL("/login", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/login", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
       const secret = new TextEncoder().encode(
@@ -82,19 +110,29 @@ export async function middleware(request: NextRequest) {
 
       // Проверяем роль администратора
       if ((payload as any).roleId !== 1) {
-        return NextResponse.redirect(new URL("/", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
       // Проверяем наличие admin_access cookie для защищенных маршрутов
       const adminAccess = request.cookies.get("admin_access")?.value;
       if (!adminAccess && path !== "/admin/verify") {
-        return NextResponse.redirect(new URL("/profile", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/profile", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
-      return NextResponse.next();
+      const nextResponse = NextResponse.next();
+      return createResponseWithCSP(nextResponse);
     } catch (error) {
       console.error("Admin middleware error:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
+      const redirectResponse = NextResponse.redirect(
+        new URL("/login", request.url)
+      );
+      return createResponseWithCSP(redirectResponse);
     }
   }
 
@@ -102,7 +140,10 @@ export async function middleware(request: NextRequest) {
   if (path.startsWith("/manager")) {
     try {
       if (!token) {
-        return NextResponse.redirect(new URL("/login", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/login", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
       const secret = new TextEncoder().encode(
@@ -112,23 +153,34 @@ export async function middleware(request: NextRequest) {
 
       // Проверяем роль менеджера
       if ((payload as any).roleId !== 3) {
-        return NextResponse.redirect(new URL("/", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
       // Проверяем наличие manager_access cookie для защищенных маршрутов
       const managerAccess = request.cookies.get("manager_access")?.value;
       if (!managerAccess && path !== "/manager/verify") {
-        return NextResponse.redirect(new URL("/profile", request.url));
+        const redirectResponse = NextResponse.redirect(
+          new URL("/profile", request.url)
+        );
+        return createResponseWithCSP(redirectResponse);
       }
 
-      return NextResponse.next();
+      const nextResponse = NextResponse.next();
+      return createResponseWithCSP(nextResponse);
     } catch (error) {
       console.error("Manager middleware error:", error);
-      return NextResponse.redirect(new URL("/login", request.url));
+      const redirectResponse = NextResponse.redirect(
+        new URL("/login", request.url)
+      );
+      return createResponseWithCSP(redirectResponse);
     }
   }
 
-  return NextResponse.next();
+  const finalResponse = NextResponse.next();
+  return createResponseWithCSP(finalResponse);
 }
 
 // Конфигурация путей для middleware
@@ -140,5 +192,6 @@ export const config = {
     "/profile/:path*",
     "/admin/:path*",
     "/manager/:path*",
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
