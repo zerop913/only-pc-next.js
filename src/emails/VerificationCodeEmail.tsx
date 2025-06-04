@@ -115,7 +115,7 @@ export const VerificationCodeEmail = ({ code }: VerificationCodeEmailProps) => {
                       }}
                     >
                       <Img
-                        src="/logo.svg"
+                        src="https://only-pc.ru/logo.svg"
                         alt="OnlyPC Logo"
                         style={{
                           display: "block",

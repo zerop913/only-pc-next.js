@@ -1,43 +1,45 @@
 /**
- * Утилита для формирования абсолютных URL для API-запросов
+ * Утилиты для работы с API
  */
-
-// Определяем базовый URL для API в зависимости от окружения
-export const getBaseUrl = () => {
-  // Используем переменную окружения на стороне сервера, если она доступна
-  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL;
-  }
-
-  // В браузере используем текущий хост
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  // В среде разработки на сервере
-  return process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:5000";
-};
 
 /**
- * Формирует абсолютный URL для API-запроса
- * @param path - Относительный путь API (например, '/api/products')
- * @returns Полный URL для API-запроса
+ * Получает полный URL для API-запроса
+ * В браузере возвращает относительный URL, на сервере - абсолютный
  */
-export const getApiUrl = (path: string): string => {
-  const baseUrl = getBaseUrl();
-  // Убеждаемся, что путь начинается с /
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${baseUrl}${normalizedPath}`;
-};
+export function getApiUrl(path: string): string {
+  // Проверяем, что мы на сервере
+  if (typeof window === "undefined") {
+    // На сервере используем абсолютный URL
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+    return `${baseUrl}${path}`;
+  }
+
+  // В браузере используем относительный URL
+  return path;
+}
 
 /**
- * Централизованная функция для выполнения API-запросов с правильными URL
- * @param path - Относительный путь API
- * @param options - Опции запроса fetch
- * @returns Promise с результатом запроса
+ * Обертка для fetch с автоматическим определением URL и обработкой ошибок
  */
-export const fetchApi = async (path: string, options?: RequestInit) => {
+export async function fetchApi(
+  path: string,
+  options?: RequestInit
+): Promise<Response> {
   const url = getApiUrl(path);
-  return fetch(url, options);
-};
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.error("API fetch error:", error);
+    throw error;
+  }
+}

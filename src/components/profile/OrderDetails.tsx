@@ -1,10 +1,10 @@
 "use client";
 
 import { OrderWithRelations } from "@/types/order";
-import { format } from "date-fns";
-import { ru } from "date-fns/locale";
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Package2,
   ArrowLeft,
@@ -16,31 +16,195 @@ import {
   MapPin,
   CalendarDays,
   ShoppingBag,
+  Settings,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useOrderStatuses } from "@/hooks/useOrderStatuses";
+import { generateStatusStyles } from "@/utils/statusStyles";
 
 interface OrderDetailsProps {
   order: OrderWithRelations;
 }
 
-export function OrderDetails({ order }: OrderDetailsProps) {
-  // Маппинг статусов к цветам и метки статусов
-  const statusColors: Record<string, string> = {
-    1: "bg-blue-500/10 text-blue-400 border-blue-500/20", // Новый
-    2: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", // В обработке
-    3: "bg-purple-500/10 text-purple-400 border-purple-500/20", // Отправлен
-    4: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", // Доставлен
-    5: "bg-red-500/10 text-red-400 border-red-500/20", // Отменён
+export function OrderDetails({ order: initialOrder }: OrderDetailsProps) {
+  const { user } = useAuth();
+  const [order, setOrder] = useState(initialOrder);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [statusUpdateSuccess, setStatusUpdateSuccess] = useState<string | null>(null);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
+
+  const {
+    statuses,
+    loading: statusesLoading,
+    getStatusColor,
+    getStatusName,
+  } = useOrderStatuses();
+
+  // Проверяем, является ли пользователь админом или менеджером
+  const canManageOrders = user && (user.roleId === 1 || user.roleId === 3);
+
+  // Ref для выпадающего списка статусов
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Закрытие выпадающего списка при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+
+    if (isStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isStatusDropdownOpen]);
+
+  // Функция форматирования даты (скопирована из OrderDetailModal для правильной работы с временными зонами)
+  const formatDate = (dateInput: string | Date) => {
+    console.log("Original date input:", dateInput, "Type:", typeof dateInput);
+
+    // Если уже объект Date, используем его, иначе парсим строку
+    let date: Date;
+    let isStringWithZ = false;
+    
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else if (typeof dateInput === 'string') {
+      isStringWithZ = dateInput.includes("Z");
+      date = new Date(dateInput);
+    } else {
+      console.error("Invalid date input type:", typeof dateInput, dateInput);
+      return "Некорректная дата";
+    }
+
+    // Проверяем, корректно ли спарсилась дата
+    if (isNaN(date.getTime())) {
+      console.error("Invalid date:", dateInput);
+      return "Некорректная дата";
+    }
+
+    console.log("Parsed date (UTC):", date.toISOString());
+    console.log("Parsed date (local):", date.toString());
+
+    // Если дата в UTC формате (с Z), отображаем в московском часовом поясе
+    if (isStringWithZ) {
+      console.log("Date with Z suffix - converting UTC to Moscow time");
+
+      const formatted = date.toLocaleString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Moscow",
+      });
+
+      console.log("Formatted date (Moscow time):", formatted);
+      return formatted;
+    }
+    // Если дата содержит информацию о часовом поясе (+03, +00 и т.д.)
+    else if (typeof dateInput === 'string' && dateInput.includes("+")) {
+      console.log("Date has explicit timezone info, converting to Moscow time");
+
+      const formatted = date.toLocaleString("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Moscow",
+      });
+
+      console.log("Formatted date (with timezone info):", formatted);
+      return formatted;
+    } else {
+      console.log("Date object or string without timezone info");
+
+      // Если это объект Date, он может содержать локальное время с часовым поясом
+      // Нам нужно отобразить UTC время (которое на 3 часа меньше московского)
+      if (dateInput instanceof Date) {
+        console.log("Date object - displaying UTC time");
+        
+        const formatted = date.toLocaleString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit", 
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "UTC",
+        });
+
+        console.log("Formatted date (UTC time):", formatted);
+        return formatted;
+      } else {
+        // Если строка без часового пояса, отображаем как есть
+        const formatted = date.toLocaleString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        console.log("Formatted date (as is):", formatted);
+        return formatted;
+      }
+    }
   };
 
-  const statusTranslations: Record<string, string> = {
-    1: "Новый",
-    2: "Подтвержден",
-    3: "Оплачен",
-    4: "В сборке",
-    5: "Отправлен",
-    6: "Доставлен",
-    7: "Отменен",
+  // Функция обновления статуса заказа
+  const updateOrderStatus = async (newStatusId: number) => {
+    if (!order?.id) return;
+
+    setIsUpdatingStatus(true);
+    setStatusUpdateSuccess(null);
+    setStatusUpdateError(null);
+
+    try {
+      const response = await fetch(`/api/manager/orders/${order.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          statusId: newStatusId,
+          comment: `Статус изменен на "${statuses.find((s) => s.id === newStatusId)?.name || "Неизвестен"}"`,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({ error: "Ошибка при чтении ответа" }));
+
+      if (!response.ok) {
+        throw new Error(data.error || `Ошибка при обновлении статуса заказа (${response.status})`);
+      }
+
+      setOrder(data.order);
+      setStatusUpdateSuccess(data.message || "Статус заказа успешно обновлен");
+
+      setTimeout(() => {
+        setStatusUpdateSuccess(null);
+      }, 3000);
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      setStatusUpdateError(
+        err instanceof Error ? err.message : "Произошла ошибка при обновлении статуса заказа"
+      );
+      setTimeout(() => {
+        setStatusUpdateError(null);
+      }, 5000);
+    } finally {
+      setIsUpdatingStatus(false);
+      setIsStatusDropdownOpen(false);
+    }
   };
 
   // Форматирование цены в едином стиле
@@ -98,11 +262,10 @@ export function OrderDetails({ order }: OrderDetailsProps) {
           </span>
         </Link>
         <div
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium ${
-            statusColors[order.statusId.toString()]
-          } border`}
+          className="px-4 py-1.5 rounded-lg text-sm font-medium border"
+          style={generateStatusStyles(getStatusColor(order.statusId))}
         >
-          {statusTranslations[order.statusId.toString()]}
+          {statusesLoading ? "Загрузка..." : getStatusName(order.statusId)}
         </div>
       </motion.div>
 
@@ -117,18 +280,79 @@ export function OrderDetails({ order }: OrderDetailsProps) {
           {/* Инфо о заказе */}
           <div className="bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden">
             <div className="p-5 border-b border-primary-border/50">
-              <div className="flex items-center gap-2">
-                <Package2 className="w-5 h-5 text-blue-400/70" />
-                <h2 className="text-xl font-semibold text-white">
-                  Заказ #{order.orderNumber}
-                </h2>
-                {paymentStatus === "Оплачен" && (
-                  <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-sm rounded-full border border-emerald-500/20 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Оплачен</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package2 className="w-5 h-5 text-blue-400/70" />
+                  <h2 className="text-xl font-semibold text-white">
+                    Заказ #{order.orderNumber}
+                  </h2>
+                  {paymentStatus === "Оплачен" && (
+                    <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-sm rounded-full border border-emerald-500/20 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Оплачен</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Блок управления статусом для админов и менеджеров */}
+                {canManageOrders && (
+                  <div className="flex items-center gap-3">
+                    <div className="relative" ref={statusDropdownRef}>
+                      <button
+                        onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                        disabled={isUpdatingStatus}
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 disabled:bg-gray-600/20 text-white rounded-lg border border-blue-500/30 transition-all duration-300 text-sm"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Изменить статус</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Выпадающий список статусов */}
+                      {isStatusDropdownOpen && (
+                        <div className="absolute top-full mt-2 right-0 w-64 bg-gradient-from/95 backdrop-blur-sm border border-primary-border rounded-lg shadow-lg z-10">
+                          <div className="p-2">
+                            <div className="text-xs text-white/60 mb-2 px-2">Текущий статус: {order.status?.name}</div>
+                            {statuses.map((status) => (
+                              <button
+                                key={status.id}
+                                onClick={() => updateOrderStatus(status.id)}
+                                disabled={isUpdatingStatus || status.id === order.statusId}
+                                className={`w-full text-left px-2 py-2 rounded text-sm transition-colors ${
+                                  status.id === order.statusId
+                                    ? 'bg-blue-600/20 text-blue-400 cursor-not-allowed'
+                                    : 'hover:bg-white/10 text-white'
+                                }`}
+                              >
+                                {status.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Индикатор загрузки */}
+                    {isUpdatingStatus && (
+                      <div className="text-blue-400 text-sm">
+                        Обновление...
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Уведомления об успехе/ошибке */}
+              {statusUpdateSuccess && (
+                <div className="mt-3 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+                  {statusUpdateSuccess}
+                </div>
+              )}
+              {statusUpdateError && (
+                <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {statusUpdateError}
+                </div>
+              )}
             </div>
 
             {/* Список товаров */}
@@ -187,9 +411,7 @@ export function OrderDetails({ order }: OrderDetailsProps) {
             <div className="p-5 border-t border-primary-border/50 flex items-center justify-between">
               <div className="text-secondary-light text-sm flex items-center gap-2">
                 <CalendarDays className="w-4 h-4" />
-                {format(new Date(order.createdAt), "d MMMM yyyy, HH:mm", {
-                  locale: ru,
-                })}
+                {formatDate(order.createdAt)}
               </div>
               <Link
                 href="/catalog"
@@ -200,6 +422,82 @@ export function OrderDetails({ order }: OrderDetailsProps) {
               </Link>
             </div>
           </div>
+
+          {/* История статусов заказа */}
+          {order.history && order.history.length > 0 && (
+            <motion.div
+              className="bg-gradient-from/10 rounded-xl border border-primary-border overflow-hidden mt-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <div className="p-5 border-b border-primary-border/50">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-blue-400/70" />
+                  История статусов заказа
+                </h2>
+              </div>
+
+              <div className="p-5">
+                <div className="space-y-4">
+                  {order.history && order.history.length > 0 && order.history
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((entry, index) => (
+                      <motion.div
+                        key={entry.id}
+                        className="flex items-start gap-4 p-4 bg-gradient-from/10 hover:bg-gradient-from/20 rounded-xl border border-primary-border/20 hover:border-blue-500/30 transition-all duration-300"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                      >
+                        {/* Индикатор статуса */}
+                        <div className="flex flex-col items-center mt-1">
+                          <div
+                            className="w-4 h-4 rounded-full border-2 border-white/20"
+                            style={{
+                              backgroundColor: entry.status?.color || "#6B7280",
+                              boxShadow: `0 0 0 3px ${entry.status?.color || "#6B7280"}20`,
+                            }}
+                          />
+                          {index < (order.history?.length || 0) - 1 && (
+                            <div className="w-px h-8 bg-gradient-to-b from-primary-border/50 to-transparent mt-2" />
+                          )}
+                        </div>
+
+                        {/* Содержимое записи */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-white/90 font-medium">
+                              {entry.status?.name || "Неизвестный статус"}
+                            </h3>
+                            <span className="text-xs text-white/60 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDate(entry.createdAt)}
+                            </span>
+                          </div>
+
+                          {entry.comment && (
+                            <p className="text-sm text-white/70 leading-relaxed">
+                              {entry.comment}
+                            </p>
+                          )}
+
+                          {entry.user && (
+                            <div className="mt-2 flex items-center gap-2 text-xs text-white/50">
+                              <User className="w-3 h-3" />
+                              <span>
+                                Изменено: {(entry.user as any)?.profile?.firstName} {(entry.user as any)?.profile?.lastName}
+                                {entry.user.email && ` (${entry.user.email})`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Правая колонка с информацией */}
@@ -290,6 +588,105 @@ export function OrderDetails({ order }: OrderDetailsProps) {
                   Комментарий к заказу
                 </div>
                 <div className="text-sm text-white/70">{order.comment}</div>
+              </div>
+            )}
+
+            {/* Изменение статуса заказа (только для админов и менеджеров) */}
+            {canManageOrders && (
+              <div className="bg-gradient-from/20 rounded-xl border border-primary-border overflow-hidden">
+                <div className="p-5 border-b border-primary-border/50">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-blue-400/70" />
+                    Изменение статуса заказа
+                  </h2>
+                </div>
+
+                <div className="p-5">
+                  {/* Текущий статус заказа */}
+                  <div className="mb-4">
+                    <div className="text-sm text-white/70 mb-1">
+                      Текущий статус
+                    </div>
+                    <div
+                      className="px-4 py-2 rounded-lg text-sm font-medium border"
+                      style={generateStatusStyles(getStatusColor(order.statusId))}
+                    >
+                      {statusesLoading ? "Загрузка..." : getStatusName(order.statusId)}
+                    </div>
+                  </div>
+
+                  {/* Новая версия блока с выбором статуса */}
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-white/70">Новый статус</div>
+                      <button
+                        onClick={() => setIsStatusDropdownOpen((prev) => !prev)}
+                        className="flex items-center gap-2 text-sm font-medium text-blue-400 hover:underline"
+                        type="button"
+                      >
+                        {isStatusDropdownOpen ? "Скрыть" : "Показать"} доступные статусы
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform ${
+                            isStatusDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {isStatusDropdownOpen && (
+                      <div className="bg-gradient-from/10 rounded-lg border border-primary-border/30 p-4">
+                        {statuses.map((status) => (
+                          <button
+                            key={status.id}
+                            onClick={() => updateOrderStatus(status.id)}
+                            className="flex items-center justify-between w-full text-left px-3 py-2 rounded-lg transition-all duration-200 hover:bg-blue-500/10"
+                            type="button"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{
+                                  backgroundColor: getStatusColor(status.id),
+                                }}
+                              />
+                              <span className="text-sm text-white/90">
+                                {status.name}
+                              </span>
+                            </div>
+                            {order.statusId === status.id && (
+                              <div className="text-blue-400">
+                                <CheckCircle2 className="w-4 h-4" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Сообщения об ошибках или успехе обновления статуса */}
+                  {(statusUpdateSuccess || statusUpdateError) && (
+                    <div className="mt-4">
+                      {statusUpdateSuccess && (
+                        <div className="text-sm text-emerald-400">
+                          {statusUpdateSuccess}
+                        </div>
+                      )}
+                      {statusUpdateError && (
+                        <div className="text-sm text-red-400">
+                          {statusUpdateError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Индикатор загрузки при обновлении статуса */}
+                  {isUpdatingStatus && (
+                    <div className="mt-4 flex justify-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

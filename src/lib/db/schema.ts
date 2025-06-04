@@ -380,7 +380,7 @@ export const orders = pgTable("orders", {
     .notNull()
     .default("0"),
   comment: text("comment"),
-  cardDetailsSnapshot: jsonb("card_details_snapshot"),
+  // cardDetailsSnapshot: jsonb("card_details_snapshot"),
   createdAt: timestamp("created_at", {
     withTimezone: true,
     mode: "string",

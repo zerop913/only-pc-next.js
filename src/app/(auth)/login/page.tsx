@@ -56,7 +56,10 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.email }),
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
       });
 
       if (!response.ok) {
@@ -65,8 +68,20 @@ export default function LoginPage() {
       }
 
       // Сохраняем данные для страницы верификации
+      console.log("Saving login data to sessionStorage:", {
+        email: data.email,
+        passwordLength: data.password ? data.password.length : 0,
+      });
+
       sessionStorage.setItem("verificationEmail", data.email);
-      sessionStorage.setItem("loginData", JSON.stringify(data));
+      sessionStorage.setItem(
+        "loginData",
+        JSON.stringify({
+          email: data.email,
+          password: data.password,
+          captchaToken: data.captchaToken,
+        })
+      );
 
       // Перенаправляем на страницу ввода кода
       router.push("/verify");

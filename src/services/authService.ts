@@ -206,8 +206,13 @@ export async function registerUser(data: z.infer<typeof RegisterSchema>) {
 
 // Аутентификация пользователя
 export async function loginUser(data: z.infer<typeof VerifyLoginSchema>) {
+  console.log("Login attempt for email:", data.email);
+  console.log(
+    "Password provided length:",
+    data.password ? data.password.length : 0
+  );
+
   const validatedData = VerifyLoginSchema.parse(data);
-  const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
   const user = await db.query.users.findFirst({
     where: eq(users.email, validatedData.email),
@@ -217,13 +222,22 @@ export async function loginUser(data: z.infer<typeof VerifyLoginSchema>) {
   });
 
   if (!user) {
+    console.log("User not found in database");
     throw new Error("Пользователь не найден");
   }
+
+  console.log("User found in database, checking password");
+  console.log(
+    "Stored password hash length:",
+    user.password ? user.password.length : 0
+  );
 
   const isValidPassword = await bcrypt.compare(
     validatedData.password,
     user.password
   );
+
+  console.log("Password validation result:", isValidPassword);
 
   if (!isValidPassword) {
     throw new Error("Неверный пароль");
@@ -254,7 +268,60 @@ export async function loginUser(data: z.infer<typeof VerifyLoginSchema>) {
   const safeUser: TokenUser = {
     id: user.id,
     email: user.email,
-    roleId: user.roleId || 2,
+    roleId: typeof user.roleId === "number" ? user.roleId : 2,
+    isActive: user.isActive ?? true,
+  };
+
+  // Генерируем токен авторизации
+  const token = generateAuthToken(safeUser);
+
+  return { user: safeUser, token };
+}
+
+// Аутентификация пользователя по email без проверки пароля (после проверки кода)
+export async function loginUserByEmail(email: string) {
+  console.log("Login by email for:", email);
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+    with: {
+      profile: true,
+    },
+  });
+
+  if (!user) {
+    console.log("User not found in database");
+    throw new Error("Пользователь не найден");
+  }
+
+  console.log("User found in database, login without password check");
+
+  // Обновляем lastLoginAt сразу в базе
+  await db
+    .update(users)
+    .set({ lastLoginAt: new Date().toISOString() })
+    .where(eq(users.id, user.id));
+
+  // Кешируем пользователя
+  const userToCache = {
+    id: user.id,
+    email: user.email,
+    roleId: user.roleId,
+    isActive: user.isActive,
+  };
+
+  await redis.set(
+    `user:${user.id}`,
+    JSON.stringify(userToCache),
+    "EX",
+    CACHE_TTL
+  );
+
+  // Создаем объект безопасного пользователя для токена
+  const safeUser: TokenUser = {
+    id: user.id,
+    email: user.email,
+    roleId: user.roleId ?? 2,
     isActive: user.isActive ?? true,
   };
 

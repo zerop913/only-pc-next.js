@@ -17,4 +17,5 @@ export interface User {
   lastName?: string | null;
   phoneNumber?: string | null;
   city?: string | null;
+  profile?: UserProfile;
 }

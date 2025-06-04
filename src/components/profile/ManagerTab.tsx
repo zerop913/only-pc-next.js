@@ -17,13 +17,16 @@ export default function ManagerTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Проверяем пароль перед отправкой запроса
+    if (!password.trim()) {
+      setError("Пароль не может быть пустым");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      console.log(
-        "Debug: Attempting manager verification with password:",
-        password
-      );
       const response = await fetch("/api/manager/verify", {
         method: "POST",
         headers: {
@@ -34,24 +37,31 @@ export default function ManagerTab() {
       });
 
       const data = await response.json();
-      console.log("Debug: Server response:", { status: response.status, data });
 
+      // Проверяем статус ответа
       if (!response.ok) {
-        throw new Error(data.error || "Ошибка доступа");
+        if (response.status === 401) {
+          // Неверный пароль или проблемы с токеном
+          setError("Неверный пароль доступа");
+          setPassword(""); // Очищаем поле пароля
+        } else if (response.status === 403) {
+          setError("У вас недостаточно прав для доступа к панели менеджера");
+        } else {
+          setError(data.error || "Произошла ошибка при проверке доступа");
+        }
+        return;
       }
 
       if (data.success) {
-        console.log("Debug: Verification successful");
+        // Успешная верификация
         await new Promise((resolve) => setTimeout(resolve, 100));
         router.push("/manager");
       } else {
-        throw new Error("Неожиданный ответ от сервера");
+        setError("Непредвиденная ошибка при проверке доступа");
       }
     } catch (err) {
       console.error("Debug: Verification error:", err);
-      setError(
-        err instanceof Error ? err.message : "Произошла ошибка при верификации"
-      );
+      setError("Произошла ошибка при проверке доступа");
     } finally {
       setIsLoading(false);
     }
@@ -84,8 +94,11 @@ export default function ManagerTab() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setPassword((prev) => prev.trim())}
                 className="w-full px-4 py-2 rounded-lg bg-gradient-from/20 border border-primary-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 pl-10"
                 placeholder="Введите пароль доступа"
+                autoComplete="off"
+                autoFocus
                 required
               />
               <KeyRound className="absolute left-3 top-2.5 w-4 h-4 text-secondary-light" />

@@ -14,7 +14,11 @@ import {
   Settings,
   TrendingUp,
 } from "lucide-react";
+
 import OrdersManagement from "@/components/manager/OrdersManagement";
+import DeliveryManagement from "@/components/manager/DeliveryManagement";
+import ClientsManagement from "@/components/manager/ClientsManagement";
+import AnalyticsPanel from "@/components/manager/AnalyticsPanel";
 
 export default function ManagerPanel() {
   const [activeTab, setActiveTab] = useState("orders");
@@ -74,9 +78,7 @@ export default function ManagerPanel() {
               <h2 className="text-xl font-semibold text-white mb-4">
                 Управление доставкой
               </h2>
-              <p className="text-secondary-light">
-                Функционал управления доставкой в разработке...
-              </p>
+              <DeliveryManagement />
             </div>
           </TabsContent>
 
@@ -85,20 +87,13 @@ export default function ManagerPanel() {
               <h2 className="text-xl font-semibold text-white mb-4">
                 Управление клиентами
               </h2>
-              <p className="text-secondary-light">
-                Функционал управления клиентами в разработке...
-              </p>
+              <ClientsManagement />
             </div>
           </TabsContent>
 
           <TabsContent value="analytics">
             <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Аналитика
-              </h2>
-              <p className="text-secondary-light">
-                Функционал аналитики в разработке...
-              </p>
+              <AnalyticsPanel />
             </div>
           </TabsContent>
 

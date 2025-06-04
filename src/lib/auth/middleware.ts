@@ -79,13 +79,14 @@ export function withAuth(handler: any, requiredRoles?: string[]) {
       return authResult;
     }
 
-    // Получаем userId из токена
+    // Получаем userId и roleId из токена
     const user = (request as any).user as JwtPayload;
 
-    // Добавляем currentUserId в контекст для последующих проверок
+    // Добавляем currentUserId и roleId в контекст для последующих проверок
     return handler(request, {
       ...context,
       currentUserId: user.userId,
+      roleId: user.roleId,
     });
   };
 }

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const { email, password } = await request.json();
 
     // Проверяем существование пользователя
     const user = await db.query.users.findFirst({
@@ -17,6 +18,17 @@ export async function POST(request: NextRequest) {
         { error: "Пользователь с таким email не найден" },
         { status: 404 }
       );
+    }
+
+    // Проверяем пароль перед отправкой кода
+    if (password) {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+
+      if (!isValidPassword) {
+        return NextResponse.json({ error: "Неверный пароль" }, { status: 401 });
+      }
+    } else {
+      return NextResponse.json({ error: "Пароль не указан" }, { status: 400 });
     }
 
     // Вызываем API для отправки кода

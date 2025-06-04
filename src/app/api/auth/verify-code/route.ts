@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCode } from "@/services/emailService";
-import { loginUser } from "@/services/authService";
+import { loginUserByEmail } from "@/services/authService";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, code, loginData } = await request.json();
+    const { email, code } = await request.json();
 
     console.log("Verifying code:", { email, code });
 
@@ -21,25 +21,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Передаем только необходимые поля для входа
-    const { user, token } = await loginUser({
-      email: loginData.email,
-      password: loginData.password,
-    });
+    // Пытаемся войти в систему по email (пароль уже проверен на этапе отправки кода)
+    let authResult;
+    try {
+      authResult = await loginUserByEmail(email);
+      console.log("Login successful for user:", authResult.user.email);
+    } catch (loginError) {
+      console.error("Login error:", loginError);
+      return NextResponse.json(
+        {
+          error:
+            loginError instanceof Error ? loginError.message : "Ошибка входа",
+        },
+        { status: 401 }
+      );
+    }
 
-    // Обновляем lastLoginAt
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-      columns: { updatedAt: true },
-    });
+    const { user, token } = authResult;
 
-    await db
-      .update(users)
-      .set({
-        lastLoginAt: new Date().toISOString(),
-        updatedAt: currentUser?.updatedAt,
-      })
-      .where(eq(users.id, user.id));
+    // lastLoginAt уже обновлен в функции loginUserByEmail
 
     // Создаем ответ
     const response = NextResponse.json(

@@ -54,19 +54,18 @@ export const OrderConfirmationEmail = ({
   };
 
   // Обновленная более яркая цветовая схема
-  const primaryColor = "#131421"; // Немного светлее для основных элементов
-  const primaryDarkColor = "#0D0E19"; // Фон страницы (темный, но не совсем черный)
-  const primaryBorderColor = "#343656"; // Более заметные границы для контраста
-  const secondaryColor = "#AEB0BD"; // Светлее для лучшей читаемости
-  const secondaryDarkColor = "#7E808F"; // Средний серый для меньшей важности текста
-  const secondaryLightColor = "#E0E0E9"; // Почти белый для основного текста
-  const gradientFromColor = "#212235"; // Более светлый градиент для фона карточек
-  const gradientToColor = "#282A3D"; // Более светлый конечный цвет градиента
-  const accentColor = "#4F92FF"; // Более яркий и насыщенный синий
-  const accentLightColor = "#75A8FF"; // Светлый синий для эффектов наведения
-  const highlightColor = "#9D6FFF"; // Более яркий фиолетовый для акцентов
+  const primaryColor = "#131421";
+  const primaryDarkColor = "#0D0E19";
+  const primaryBorderColor = "#343656";
+  const secondaryColor = "#AEB0BD";
+  const secondaryDarkColor = "#7E808F";
+  const secondaryLightColor = "#E0E0E9";
+  const gradientFromColor = "#212235";
+  const gradientToColor = "#282A3D";
+  const accentColor = "#4F92FF";
+  const accentLightColor = "#75A8FF";
+  const highlightColor = "#9D6FFF";
 
-  // Стиль для основного блока (без позиционированной полосы)
   const sectionStyle = {
     padding: "0",
     backgroundColor: gradientFromColor,
@@ -78,7 +77,6 @@ export const OrderConfirmationEmail = ({
     boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
   };
 
-  // Новый стиль для содержимого секции с паддингами
   const sectionContentStyle = {
     padding: "32px",
   };
@@ -172,7 +170,7 @@ export const OrderConfirmationEmail = ({
                         // }}
                         >
                           <Img
-                            src="/logo.svg"
+                            src="https://only-pc.ru/logo.svg"
                             alt="OnlyPC Logo"
                             width="40"
                             height="40"

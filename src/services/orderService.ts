@@ -1017,3 +1017,214 @@ export async function getPaymentMethodById(id: number) {
     return null;
   }
 }
+
+/**
+ * Создание нового способа доставки
+ */
+export async function createDeliveryMethod(
+  methodData: Omit<DeliveryMethod, "id">
+): Promise<{
+  success: boolean;
+  deliveryMethod?: DeliveryMethod;
+  message?: string;
+}> {
+  try {
+    const [newMethod] = await db
+      .insert(deliveryMethods)
+      .values({
+        name: methodData.name,
+        description: methodData.description,
+        price: methodData.price,
+        estimatedDays: methodData.estimatedDays,
+        isActive: methodData.isActive,
+      })
+      .returning();
+
+    return {
+      success: true,
+      deliveryMethod: {
+        id: newMethod.id,
+        name: newMethod.name,
+        description: newMethod.description,
+        price: newMethod.price.toString(),
+        estimatedDays: newMethod.estimatedDays,
+        isActive: newMethod.isActive === null ? true : newMethod.isActive,
+      },
+      message: "Способ доставки успешно создан",
+    };
+  } catch (error) {
+    console.error("Ошибка при создании способа доставки:", error);
+    return {
+      success: false,
+      message: "Произошла ошибка при создании способа доставки",
+    };
+  }
+}
+
+/**
+ * Обновление способа доставки
+ */
+export async function updateDeliveryMethod(
+  methodId: number,
+  methodData: Partial<DeliveryMethod>
+): Promise<{
+  success: boolean;
+  deliveryMethod?: DeliveryMethod;
+  message?: string;
+}> {
+  try {
+    // Проверяем существование способа доставки
+    const existingMethod = await db.query.deliveryMethods.findFirst({
+      where: eq(deliveryMethods.id, methodId),
+    });
+
+    if (!existingMethod) {
+      return {
+        success: false,
+        message: "Способ доставки не найден",
+      };
+    }
+
+    const [updatedMethod] = await db
+      .update(deliveryMethods)
+      .set({
+        name: methodData.name,
+        description: methodData.description,
+        price: methodData.price,
+        estimatedDays: methodData.estimatedDays,
+        isActive: methodData.isActive,
+      })
+      .where(eq(deliveryMethods.id, methodId))
+      .returning();
+
+    return {
+      success: true,
+      deliveryMethod: {
+        id: updatedMethod.id,
+        name: updatedMethod.name,
+        description: updatedMethod.description,
+        price: updatedMethod.price.toString(),
+        estimatedDays: updatedMethod.estimatedDays,
+        isActive:
+          updatedMethod.isActive === null ? true : updatedMethod.isActive,
+      },
+      message: "Способ доставки успешно обновлен",
+    };
+  } catch (error) {
+    console.error("Ошибка при обновлении способа доставки:", error);
+    return {
+      success: false,
+      message: "Произошла ошибка при обновлении способа доставки",
+    };
+  }
+}
+
+/**
+ * Деактивация способа доставки
+ */
+export async function deactivateDeliveryMethod(
+  methodId: number
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    // Проверяем существование способа доставки
+    const existingMethod = await db.query.deliveryMethods.findFirst({
+      where: eq(deliveryMethods.id, methodId),
+    });
+
+    if (!existingMethod) {
+      return {
+        success: false,
+        message: "Способ доставки не найден",
+      };
+    }
+
+    // Деактивируем способ доставки вместо удаления
+    await db
+      .update(deliveryMethods)
+      .set({
+        isActive: false,
+      })
+      .where(eq(deliveryMethods.id, methodId));
+
+    return {
+      success: true,
+      message: "Способ доставки успешно деактивирован",
+    };
+  } catch (error) {
+    console.error("Ошибка при деактивации способа доставки:", error);
+    return {
+      success: false,
+      message: "Произошла ошибка при деактивации способа доставки",
+    };
+  }
+}
+
+/**
+ * Получение заказов по статусам (для доставки)
+ */
+export async function getOrdersByStatuses(
+  statusIds: number[],
+  page: number = 1,
+  limit: number = 20
+): Promise<{ orders: OrderWithRelations[]; total: number }> {
+  try {
+    return await getAllOrders(page, limit, statusIds);
+  } catch (error) {
+    console.error("Ошибка при получении заказов по статусам:", error);
+    return { orders: [], total: 0 };
+  }
+}
+
+/**
+ * Получение клиентов для менеджера
+ */
+export async function getClientsForManager() {
+  try {
+    const response = await fetch("/api/manager/clients", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить список клиентов");
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || "Ошибка при загрузке клиентов");
+    }
+
+    return data.clients;
+  } catch (error) {
+    console.error("Ошибка загрузки клиентов:", error);
+    throw error;
+  }
+}
+
+/**
+ * Получение заказов с определенными статусами доставки
+ */
+export async function getOrdersWithDeliveryStatus() {
+  try {
+    const response = await fetch("/api/manager/delivery/orders", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Не удалось загрузить заказы в доставке");
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || "Ошибка при загрузке заказов в доставке");
+    }
+
+    return data.orders;
+  } catch (error) {
+    console.error("Ошибка загрузки заказов в доставке:", error);
+    throw error;
+  }
+}

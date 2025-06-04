@@ -206,11 +206,15 @@ export default function VerifyPage() {
     try {
       setIsLoading(true);
       const email = sessionStorage.getItem("verificationEmail");
+      const loginData = JSON.parse(sessionStorage.getItem("loginData") || "{}");
 
       const response = await fetch("/api/auth/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email,
+          password: loginData.password
+        }),
       });
 
       if (!response.ok) {
@@ -235,7 +239,9 @@ export default function VerifyPage() {
       setError(null);
 
       const email = sessionStorage.getItem("verificationEmail");
-      const loginData = JSON.parse(sessionStorage.getItem("loginData") || "{}");
+      
+      // Логика изменена - пароль уже проверен при отправке кода
+      console.log("Verifying code for email:", email);
 
       const response = await fetch("/api/auth/verify-code", {
         method: "POST",
@@ -243,7 +249,6 @@ export default function VerifyPage() {
         body: JSON.stringify({
           email,
           code: fullCode,
-          loginData,
         }),
       });
 
