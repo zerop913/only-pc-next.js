@@ -3,9 +3,9 @@ export function getApiUrl(path: string): string {
   if (typeof window === "undefined") {
     // На сервере всегда используем абсолютный URL для API запросов
     if (path.startsWith("/api/")) {
-      // Получаем домен из переменных окружения или используем only-pc.ru
+      // Получаем домен из переменных окружения или используем локальный сервер для разработки
       const baseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "https://only-pc.ru";
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
       return `${baseUrl}${path}`;
     }
     return path;

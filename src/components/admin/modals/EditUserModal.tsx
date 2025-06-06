@@ -44,6 +44,7 @@ export default function EditUserModal({
 
   const roleOptions = [
     { value: 2, label: "Пользователь" },
+    { value: 3, label: "Менеджер" },
     { value: 1, label: "Администратор" },
   ];
 

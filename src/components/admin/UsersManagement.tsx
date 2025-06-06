@@ -279,10 +279,16 @@ export default function UsersManagement() {
                       ${
                         user.roleId === 1
                           ? "bg-blue-500/10 text-blue-400 border border-blue-500/30"
-                          : "bg-gray-500/10 text-gray-400 border border-gray-500/30"
+                          : user.roleId === 3
+                            ? "bg-orange-500/10 text-orange-400 border border-orange-500/30"
+                            : "bg-gray-500/10 text-gray-400 border border-gray-500/30"
                       }`}
                     >
-                      {user.roleId === 1 ? "Администратор" : "Пользователь"}
+                      {user.roleId === 1
+                        ? "Администратор"
+                        : user.roleId === 3
+                          ? "Менеджер"
+                          : "Пользователь"}
                     </span>
                   </td>
                   <td className="px-4 py-3">

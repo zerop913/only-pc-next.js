@@ -95,6 +95,23 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         const cookieFavorites = getStandardCookie(COOKIE_KEYS.FAVORITES);
         if (cookieFavorites) {
           setFavorites(cookieFavorites);
+
+          // Обновляем Set с ID избранных товаров из куков
+          const ids = new Set<number>();
+          Object.values(cookieFavorites).forEach((categoryItems: any) => {
+            if (Array.isArray(categoryItems)) {
+              categoryItems.forEach((item: FavoriteItem) => {
+                if (
+                  item &&
+                  item.product &&
+                  typeof item.product.id === "number"
+                ) {
+                  ids.add(item.product.id);
+                }
+              });
+            }
+          });
+          setFavoriteIds(ids);
         }
       } finally {
         setIsLoading(false);
