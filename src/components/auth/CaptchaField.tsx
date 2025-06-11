@@ -4,6 +4,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useState,
 } from "react";
 
 interface CaptchaFieldProps {
@@ -14,20 +15,8 @@ interface CaptchaFieldProps {
 interface ReCaptchaWindow extends Window {
   onRecaptchaLoad?: () => void;
   grecaptcha?: {
-    render: (
-      container: HTMLElement | string,
-      params: {
-        sitekey: string;
-        callback: (token: string) => void;
-        "expired-callback": () => void;
-        "error-callback"?: () => void;
-        size?: string;
-        badge?: string;
-      }
-    ) => number;
-    ready?: (callback: () => void) => void;
-    execute?: (id: number) => Promise<void>;
-    reset: (id: number) => void;
+    ready: (callback: () => void) => void;
+    execute: (siteKey: string, options: { action: string }) => Promise<string>;
   };
 }
 
@@ -35,39 +24,60 @@ export const CaptchaField = forwardRef<
   { resetCaptcha: () => void },
   CaptchaFieldProps
 >(({ onChange, onReset }, ref) => {
-  const captchaRef = useRef<HTMLDivElement>(null);
-  const captchaWidgetId = useRef<number | null>(null);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const resetCaptcha = useCallback(() => {
+  // Функция для выполнения reCAPTCHA
+  const executeRecaptcha = useCallback(async () => {
+    if (typeof window === "undefined") return;
+
     const reCaptchaWindow = window as ReCaptchaWindow;
-    const grecaptcha = reCaptchaWindow?.grecaptcha;
 
-    if (captchaWidgetId.current !== null && grecaptcha?.reset) {
-      grecaptcha.reset(captchaWidgetId.current);
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+    try {
+      if (!reCaptchaWindow.grecaptcha) {
+        console.warn("reCAPTCHA еще не загружена");
+        return;
       }
 
-      // Увеличиваем задержку перед повторным выполнением капчи
-      timeoutRef.current = setTimeout(() => {
-        if (captchaWidgetId.current !== null && grecaptcha?.execute) {
-          grecaptcha.execute(captchaWidgetId.current).catch((error) => {
-            // Игнорируем ошибки, связанные с отменой или сбросом капчи
-            console.warn(
-              "reCAPTCHA execute warning:",
-              error || "Unknown error"
-            );
-            return null; // Возвращаем null для корректного завершения промиса
+      const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      if (!siteKey) {
+        console.error("reCAPTCHA site key не найден");
+        return;
+      }
+
+      await reCaptchaWindow.grecaptcha.ready(async () => {
+        try {
+          const token = await reCaptchaWindow.grecaptcha!.execute(siteKey, {
+            action: "login",
           });
+          console.log("Капча успешно пройдена!");
+          onChange(token);
+        } catch (error) {
+          console.warn("Ошибка при выполнении reCAPTCHA:", error);
+          onChange(null);
         }
-      }, 1500); // Увеличенная задержка
+      });
+    } catch (error) {
+      console.error("Ошибка при инициализации reCAPTCHA:", error);
+      onChange(null);
     }
+  }, [onChange]);
+
+  // Метод для сброса и повторного запуска reCAPTCHA
+  const resetCaptcha = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Устанавливаем задержку перед повторной проверкой
+    timeoutRef.current = setTimeout(() => {
+      executeRecaptcha();
+    }, 1500);
+
     onChange(null);
     onReset?.();
-  }, [onChange, onReset]);
+  }, [executeRecaptcha, onChange, onReset]);
 
   // Экспортируем метод resetCaptcha через ref
   useImperativeHandle(ref, () => ({
@@ -83,117 +93,69 @@ export const CaptchaField = forwardRef<
     };
   }, []);
 
+  // Загрузка скрипта reCAPTCHA v3
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isScriptLoaded) return;
 
-    const reCaptchaWindow = window as ReCaptchaWindow;
-
-    if (!reCaptchaWindow.grecaptcha) {
-      reCaptchaWindow.onRecaptchaLoad = () => {
-        initializeCaptcha();
-      };
-
+    const loadRecaptchaScript = () => {
       const script = document.createElement("script");
-      script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit`;
+      script.src = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
       script.async = true;
       script.defer = true;
-      document.head.appendChild(script);
-
-      scriptRef.current = script;
-
-      // Очистка при размонтировании компонента
-      return () => {
-        if (scriptRef.current && document.head.contains(scriptRef.current)) {
-          document.head.removeChild(scriptRef.current);
-        }
-        if (reCaptchaWindow.onRecaptchaLoad) {
-          reCaptchaWindow.onRecaptchaLoad = undefined;
-        }
+      script.onload = () => {
+        setIsScriptLoaded(true);
+        executeRecaptcha();
       };
-    } else if (
-      reCaptchaWindow.grecaptcha?.render &&
-      typeof reCaptchaWindow.grecaptcha.render === "function"
-    ) {
-      initializeCaptcha();
-    } else if (reCaptchaWindow.grecaptcha?.ready) {
-      reCaptchaWindow.grecaptcha.ready(() => {
-        initializeCaptcha();
-      });
+
+      document.head.appendChild(script);
+      scriptRef.current = script;
+    };
+
+    loadRecaptchaScript();
+
+    // Очистка при размонтировании компонента
+    return () => {
+      if (scriptRef.current && document.head.contains(scriptRef.current)) {
+        document.head.removeChild(scriptRef.current);
+      }
+    };
+  }, [executeRecaptcha]);
+
+  // Добавляем глобальные стили для скрытия значка капчи при монтировании компонента
+  useEffect(() => {
+    // Проверяем, существует ли уже стиль для скрытия капчи
+    let styleElement = document.getElementById("recaptcha-badge-hide");
+
+    if (!styleElement) {
+      // Создаем новый элемент стиля
+      styleElement = document.createElement("style");
+      styleElement.id = "recaptcha-badge-hide";
+      styleElement.innerHTML = `
+        .grecaptcha-badge { 
+          visibility: hidden !important; 
+          opacity: 0 !important;
+          width: 0 !important;
+          height: 0 !important;
+          position: absolute !important;
+          z-index: -999999 !important;
+          display: none !important;
+          pointer-events: none !important;
+          bottom: -9999px !important;
+          right: -9999px !important;
+        }
+      `;
+
+      // Добавляем стиль в head документа
+      document.head.appendChild(styleElement);
     }
+
+    // Функция очистки при размонтировании компонента
+    return () => {
+      // Не удаляем стиль при размонтировании, чтобы он продолжал действовать
+    };
   }, []);
 
-  // Функция для инициализации reCAPTCHA
-  const initializeCaptcha = () => {
-    const reCaptchaWindow = window as ReCaptchaWindow;
-    const grecaptcha = reCaptchaWindow?.grecaptcha;
-
-    if (!captchaRef.current || !grecaptcha?.render) {
-      console.warn("reCAPTCHA not ready or captcha ref not available");
-      return;
-    }
-
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (!siteKey) {
-      console.error("reCAPTCHA site key not found");
-      return;
-    }
-
-    try {
-      if (captchaWidgetId.current !== null && grecaptcha.reset) {
-        grecaptcha.reset(captchaWidgetId.current);
-      } else {
-        captchaWidgetId.current = grecaptcha.render(captchaRef.current, {
-          sitekey: siteKey,
-          callback: (token: string) => {
-            console.log("Капча успешно пройдена!");
-            onChange(token);
-          },
-          "expired-callback": () => {
-            console.log("reCAPTCHA expired");
-            onChange(null);
-          },
-          "error-callback": () => {
-            console.warn("reCAPTCHA error occurred");
-            onChange(null);
-          },
-          size: "invisible",
-          badge: "bottomleft",
-        });
-
-        setTimeout(() => {
-          if (captchaWidgetId.current !== null && grecaptcha?.execute) {
-            grecaptcha.execute(captchaWidgetId.current).catch((error) => {
-              // Игнорируем ошибки, связанные с отменой или сбросом капчи
-              console.warn(
-                "reCAPTCHA execute warning:",
-                error || "Unknown error"
-              );
-              return null; // Возвращаем null для корректного завершения промиса
-            });
-          }
-        }, 1000);
-      }
-    } catch (error) {
-      console.error("Ошибка при рендеринге reCAPTCHA:", error);
-    }
-  };
-
-  return (
-    <div>
-      <div
-        ref={captchaRef}
-        className="invisible"
-        style={{ width: 0, height: 0 }}
-      ></div>
-
-      <style jsx global>{`
-        .grecaptcha-badge {
-          visibility: hidden !important;
-          opacity: 0 !important;
-        }
-      `}</style>
-    </div>
-  );
+  return <div style={{ display: "none" }} />;
 });
 
 CaptchaField.displayName = "CaptchaField";

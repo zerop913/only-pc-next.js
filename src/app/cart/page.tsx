@@ -5,9 +5,14 @@ import { motion } from "framer-motion";
 import CartPageContent from "@/components/cart/CartPageContent";
 import EmptyCart from "@/components/cart/EmptyCart";
 import { useCart } from "@/contexts/CartContext";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function CartPage() {
   const { cartItems, isItemInCart } = useCart();
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.CART;
+  }, []);
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">

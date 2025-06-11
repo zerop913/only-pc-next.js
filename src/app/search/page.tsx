@@ -7,6 +7,7 @@ import { Product } from "@/types/product";
 import { SearchResponse } from "@/types/search";
 import Pagination from "@/components/common/ui/Pagination";
 import SearchRelevance from "@/components/search/SearchRelevance";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -15,6 +16,10 @@ export default function SearchPage() {
   const page = Number(searchParams.get("page")) || 1;
   const [results, setResults] = useState<SearchResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = query ? `Поиск: "${query}" | OnlyPC` : PAGE_TITLES.SEARCH;
+  }, [query]);
 
   useEffect(() => {
     const fetchResults = async () => {

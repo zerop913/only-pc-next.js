@@ -8,12 +8,17 @@ import { motion } from "framer-motion";
 import { CreditCardIcon, QrCodeIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import OrderSummaryStatic from "@/components/checkout/OrderSummaryStatic";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function PaymentPage() {
   const router = useRouter();
   const { checkoutData, isReadyForPayment } = useCheckout();
   const { cartItems } = useCart();
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.CHECKOUT_PAYMENT;
+  }, []);
 
   useEffect(() => {
     // Проверяем наличие данных для оплаты

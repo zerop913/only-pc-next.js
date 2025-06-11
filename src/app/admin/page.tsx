@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, forwardRef } from "react";
+import { useState, useRef, forwardRef, useEffect } from "react";
 import {
   Tabs,
   TabsContent,
@@ -11,6 +11,7 @@ import { Users, Package, FolderTree, Settings } from "lucide-react";
 import UsersManagement from "@/components/admin/UsersManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import ProductsManagement from "@/components/admin/ProductsManagement";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 interface ProductsManagementRef {
   setInitialCategory: (categoryId: number) => void;
@@ -19,6 +20,10 @@ interface ProductsManagementRef {
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("users");
   const productsRef = useRef<ProductsManagementRef>(null);
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.ADMIN;
+  }, []);
 
   const handleNavigateToProducts = (categoryId: number) => {
     setActiveTab("products");

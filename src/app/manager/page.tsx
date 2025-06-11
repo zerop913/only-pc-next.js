@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Tabs,
   TabsContent,
@@ -19,9 +19,14 @@ import OrdersManagement from "@/components/manager/OrdersManagement";
 import DeliveryManagement from "@/components/manager/DeliveryManagement";
 import ClientsManagement from "@/components/manager/ClientsManagement";
 import AnalyticsPanel from "@/components/manager/AnalyticsPanel";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function ManagerPanel() {
   const [activeTab, setActiveTab] = useState("orders");
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.MANAGER;
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

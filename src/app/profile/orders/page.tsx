@@ -2,11 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function OrderRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
+    document.title = PAGE_TITLES.PROFILE_ORDERS;
     // Перенаправляем пользователя на страницу профиля с вкладкой заказов
     router.push("/profile?tab=orders");
   }, [router]);

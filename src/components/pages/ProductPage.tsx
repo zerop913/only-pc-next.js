@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Product } from "@/types/product";
 import ProductDetail from "@/components/configurator/product-detail/ProductDetail";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function ProductPage() {
   const router = useRouter();
@@ -22,6 +23,15 @@ export default function ProductPage() {
   const categorySlug = searchParams.get("category") || "";
   const subcategorySlug = searchParams.get("subcategory") || undefined;
   const productSlug = params.slug as string;
+
+  // Устанавливаем title страницы
+  useEffect(() => {
+    if (product) {
+      document.title = PAGE_TITLES.PRODUCT_DETAIL(product.title);
+    } else {
+      document.title = PAGE_TITLES.PRODUCT;
+    }
+  }, [product]);
 
   useEffect(() => {
     const fetchProduct = async () => {

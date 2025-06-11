@@ -26,6 +26,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
 import { useCart } from "@/contexts/CartContext";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 interface DetailedComponent {
   category: Category;
@@ -72,18 +73,29 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
     "components"
   );
   const [isAddedToCart, setIsAddedToCart] = useState(false);
-  const [buttonState, setButtonState] = useState<'default' | 'added' | 'cart'>('default');
+  const [buttonState, setButtonState] = useState<"default" | "added" | "cart">(
+    "default"
+  );
   const router = useRouter();
   const { addToCart, isItemInCart } = useCart();
+
+  // Устанавливаем title страницы
+  useEffect(() => {
+    if (build) {
+      document.title = `${build.name} - Готовая сборка ПК | OnlyPC`;
+    } else {
+      document.title = PAGE_TITLES.CATALOG;
+    }
+  }, [build]);
 
   // Эффект для проверки состояния корзины при изменении slug
   useEffect(() => {
     // Проверяем, есть ли товар в корзине при изменении slug
     const inCart = isItemInCart(slug);
     setIsAddedToCart(inCart);
-    setButtonState(inCart ? 'cart' : 'default');
+    setButtonState(inCart ? "cart" : "default");
   }, [slug, isItemInCart]);
-  
+
   useEffect(() => {
     const fetchBuildDetails = async () => {
       try {
@@ -107,12 +119,13 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
 
         // Проверяем, есть ли сборка уже в корзине
         if (processedBuild.id) {
-          const inCart = isItemInCart(processedBuild.id.toString()) || isItemInCart(slug);
+          const inCart =
+            isItemInCart(processedBuild.id.toString()) || isItemInCart(slug);
           setIsAddedToCart(inCart);
-          
+
           // Если товар в корзине, устанавливаем состояние кнопки "корзина"
           if (inCart) {
-            setButtonState('cart');
+            setButtonState("cart");
           }
         }
       } catch (error) {
@@ -171,7 +184,6 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
-
       {/* Хлебные крошки */}
       <motion.div
         className="mb-4"
@@ -352,15 +364,19 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
               <div className="px-5 mb-4">
                 <motion.button
                   className={`w-full relative overflow-hidden font-bold py-3 px-6 rounded-lg transition-all duration-300 group backdrop-blur-sm border ${
-                    buttonState === 'added' 
-                      ? 'bg-green-500/30 hover:bg-green-500/40 border-green-500/50 text-white' 
-                      : buttonState === 'cart'
-                        ? 'bg-blue-400/30 hover:bg-blue-400/40 border-blue-400/50 text-white'
-                        : 'bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-white'
+                    buttonState === "added"
+                      ? "bg-green-500/30 hover:bg-green-500/40 border-green-500/50 text-white"
+                      : buttonState === "cart"
+                        ? "bg-blue-400/30 hover:bg-blue-400/40 border-blue-400/50 text-white"
+                        : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-white"
                   }`}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    if (build && !isItemInCart(slug) && buttonState === 'default') {
+                    if (
+                      build &&
+                      !isItemInCart(slug) &&
+                      buttonState === "default"
+                    ) {
                       // Создаем объект с компонентами для отображения в корзине
                       const cartComponents: Record<
                         string,
@@ -389,11 +405,11 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
                       });
 
                       // Изменяем состояние кнопки на "добавлено"
-                      setButtonState('added');
-                      
+                      setButtonState("added");
+
                       // Через 2 секунды меняем на состояние "корзина"
                       setTimeout(() => {
-                        setButtonState('cart');
+                        setButtonState("cart");
                       }, 2000);
                     } else {
                       // Перенаправляем на страницу корзины
@@ -402,12 +418,12 @@ const BuildDetailPage = ({ params }: { params: Promise<{ slug: string }> }) => {
                   }}
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    {buttonState === 'added' ? (
+                    {buttonState === "added" ? (
                       <>
                         <CheckIcon className="w-5 h-5" />
                         Товар добавлен
                       </>
-                    ) : buttonState === 'cart' || isItemInCart(slug) ? (
+                    ) : buttonState === "cart" || isItemInCart(slug) ? (
                       <>
                         <ShoppingCartIcon className="w-5 h-5" />
                         Перейти в корзину

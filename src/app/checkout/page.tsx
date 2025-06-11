@@ -6,10 +6,15 @@ import CheckoutForm from "@/components/checkout/CheckoutForm";
 import { useCart } from "@/contexts/CartContext";
 import { useRouter } from "next/navigation";
 import EmptyCart from "@/components/cart/EmptyCart";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function CheckoutPage() {
   const { cartItems } = useCart();
   const router = useRouter();
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.CHECKOUT;
+  }, []);
 
   if (cartItems.length === 0) {
     return <EmptyCart />;

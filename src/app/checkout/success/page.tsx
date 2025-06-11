@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { sendOrderConfirmationEmail } from "@/services/orderEmailService";
 import Link from "next/link";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function OrderSuccessPage() {
   const searchParams = useSearchParams();
@@ -25,6 +26,10 @@ export default function OrderSuccessPage() {
 
   // Состояние для отслеживания необходимости перенаправления
   const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.CHECKOUT_SUCCESS;
+  }, []);
 
   // Эффект для обработки отсутствующего номера заказа
   useEffect(() => {

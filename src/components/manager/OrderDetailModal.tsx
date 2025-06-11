@@ -109,7 +109,7 @@ export default function OrderDetailModal({
     setLoadingStatuses(true);
 
     try {
-      const response = await fetch("/api/order-statuses", {
+      const response = await fetch("/api/orders/statuses", {
         credentials: "include",
         headers: {
           "Cache-Control": "no-cache",
@@ -650,7 +650,8 @@ export default function OrderDetailModal({
                                         <span
                                           className="block w-3 h-3 rounded-full"
                                           style={{
-                                            backgroundColor: status.color || "#6B7280"
+                                            backgroundColor:
+                                              status.color || "#6B7280",
                                           }}
                                         ></span>
                                         <span className="flex-grow text-white">
@@ -914,7 +915,10 @@ export default function OrderDetailModal({
                                       <div className="flex items-center space-x-2 flex-1 min-w-0">
                                         <span
                                           className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                                          style={{ backgroundColor: (entry.status?.color || "#6B7280") as string }}
+                                          style={{
+                                            backgroundColor: (entry.status
+                                              ?.color || "#6B7280") as string,
+                                          }}
                                         ></span>{" "}
                                         <div className="min-w-0 flex-1">
                                           <p className="text-white text-sm truncate">

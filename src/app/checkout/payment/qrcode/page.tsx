@@ -9,8 +9,12 @@ import { useCheckout } from "@/contexts/CheckoutContext";
 import { QrCodeIcon } from "@heroicons/react/24/outline";
 import OrderSummaryStatic from "@/components/checkout/OrderSummaryStatic";
 import PaymentQrCode from "@/components/payment/PaymentQrCode";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function QrCodePaymentPage() {
+  useEffect(() => {
+    document.title = "Оплата по QR-коду - " + PAGE_TITLES.CHECKOUT_PAYMENT;
+  }, []);
   const router = useRouter();
   const { cartItems, clearCart } = useCart();
   const { checkoutData, isReadyForPayment } = useCheckout();

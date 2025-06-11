@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button/Button";
 import { KeyRound } from "lucide-react";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function ManagerVerification() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    document.title = "Верификация менеджера - " + PAGE_TITLES.MANAGER;
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();

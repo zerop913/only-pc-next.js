@@ -8,9 +8,10 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthField } from "@/components/auth/AuthField";
 import { CaptchaField } from "@/components/auth/CaptchaField";
 import Button from "@/components/common/Button/Button";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "../../../utils/apiUtils";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +20,10 @@ export default function LoginPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
   const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.LOGIN;
+  }, []);
 
   const {
     register,

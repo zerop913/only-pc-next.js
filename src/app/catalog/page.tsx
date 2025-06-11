@@ -32,6 +32,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { PAGE_TITLES } from "@/config/pageTitles";
 import BuildCard from "@/components/catalog/BuildCard";
 import Select from "@/components/common/ui/Select";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -236,6 +237,11 @@ export default function CatalogPage() {
       }
     }
   };
+
+  // Устанавливаем title страницы
+  useEffect(() => {
+    document.title = PAGE_TITLES.CATALOG;
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {

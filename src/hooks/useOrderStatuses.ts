@@ -14,7 +14,7 @@ interface UseOrderStatusesReturn {
   loading: boolean;
   error: string | null;
   getStatusById: (id: number) => OrderStatus | undefined;
-  getStatusColor: (statusId: number) => string;
+  getStatusColor: (statusId: number) => string | undefined;
   getStatusName: (statusId: number) => string;
 }
 
@@ -29,7 +29,7 @@ export const useOrderStatuses = (): UseOrderStatusesReturn => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch("/api/order-statuses", {
+        const response = await fetch("/api/orders/statuses", {
           credentials: "include",
           headers: {
             "Cache-Control": "no-cache",
@@ -49,17 +49,6 @@ export const useOrderStatuses = (): UseOrderStatusesReturn => {
       } catch (err) {
         console.error("Ошибка при загрузке статусов заказов:", err);
         setError(err instanceof Error ? err.message : "Неизвестная ошибка");
-        
-        // Fallback статусы на случай ошибки API
-        setStatuses([
-          { id: 1, name: "Новый", color: "#3B82F6" },
-          { id: 2, name: "Подтвержден", color: "#F59E0B" },
-          { id: 3, name: "Оплачен", color: "#8B5CF6" },
-          { id: 4, name: "В сборке", color: "#06B6D4" },
-          { id: 5, name: "Отправлен", color: "#10B981" },
-          { id: 6, name: "Доставлен", color: "#059669" },
-          { id: 7, name: "Отменен", color: "#EF4444" },
-        ]);
       } finally {
         setLoading(false);
       }
@@ -69,30 +58,15 @@ export const useOrderStatuses = (): UseOrderStatusesReturn => {
   }, []);
 
   const getStatusById = (id: number): OrderStatus | undefined => {
-    return statuses.find(status => status.id === id);
+    return statuses.find((status) => status.id === id);
   };
-
-  const getStatusColor = (statusId: number): string => {
+  const getStatusColor = (statusId: number): string | undefined => {
     const status = getStatusById(statusId);
-    if (!status?.color) {
-      // Fallback цвета для статусов без цвета
-      const fallbackColors: Record<number, string> = {
-        1: "#3B82F6", // blue
-        2: "#F59E0B", // yellow
-        3: "#8B5CF6", // purple
-        4: "#06B6D4", // cyan
-        5: "#10B981", // emerald
-        6: "#059669", // emerald-600
-        7: "#EF4444", // red
-      };
-      return fallbackColors[statusId] || "#6B7280"; // gray as default
-    }
-    return status.color;
+    return status?.color || undefined;
   };
-
   const getStatusName = (statusId: number): string => {
     const status = getStatusById(statusId);
-    return status?.name || "Неизвестен";
+    return status?.name || "Статус неизвестен";
   };
 
   return {

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import Button from "@/components/common/Button/Button";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -13,6 +14,10 @@ export default function VerifyPage() {
   const [timeLeft, setTimeLeft] = useState(0);
 
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.VERIFY;
+  }, []);
 
   useEffect(() => {
     const email = sessionStorage.getItem("verificationEmail");
@@ -66,49 +71,45 @@ export default function VerifyPage() {
     return () => clearInterval(timer);
   }, [router]);
 
-  // Обработчик для пользовательского ввода в любое поле
+  // Обработчик для ввода в поле для всех устройств
   const handleInputEvent = (event: React.SyntheticEvent) => {
     const target = event.target as HTMLInputElement;
-    const fieldIndex = parseInt(target.dataset.index || "0", 10);
+    const index = parseInt(target.dataset.index || "0", 10);
+    const value = target.value;
 
-    setTimeout(() => {
-      let inputValue = target.value;
+    // Проверка на ввод числа
+    if (/^\d$/.test(value)) {
+      // Если введена цифра на мобильном устройстве, обрабатываем это здесь
+      handleMobileDigitInput(index, value);
+    }
+  };
 
-      // Если вставили или ввели несколько цифр сразу
-      if (inputValue.length > 1) {
-        // Разбиваем на отдельные цифры
-        const digits = inputValue.replace(/\D/g, "").split("").slice(0, 6);
+  // Специальный обработчик для ввода цифр на мобильных устройствах
+  const handleMobileDigitInput = (index: number, value: string) => {
+    // Обновляем текущее поле
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
 
-        // Распределяем цифры по полям
-        const newCode = [...code];
-        digits.forEach((digit, index) => {
-          if (fieldIndex + index < 6) {
-            newCode[fieldIndex + index] = digit;
-          }
-        });
-
-        setCode(newCode);
-
-        // Фокусируемся на следующем пустом поле или на последнем поле
-        const nextEmptyIndex = newCode.findIndex((val) => val === "");
-        if (nextEmptyIndex !== -1) {
-          inputRefs.current[nextEmptyIndex]?.focus();
-        } else {
-          inputRefs.current[5]?.focus();
-        }
-      }
-    }, 0);
+    // Если это не последнее поле, переходим к следующему
+    if (index < 5) {
+      // Используем setTimeout для мобильных устройств
+      setTimeout(() => {
+        inputRefs.current[index + 1]?.focus();
+      }, 10);
+    }
   };
 
   const handleInputChange = (index: number, value: string) => {
-    // Если вставлен весь код сразу
+    // Для вставки нескольких цифр (например, при копировании кода)
     if (value.length > 1) {
       const digits = value.replace(/\D/g, "").split("").slice(0, 6);
-      const newCode = [...code];
 
+      // Заполняем поля кода
+      const newCode = [...code];
       digits.forEach((digit, i) => {
-        if (index + i < 6) {
-          newCode[index + i] = digit;
+        if (i < 6) {
+          newCode[i] = digit;
         }
       });
 
@@ -121,26 +122,30 @@ export default function VerifyPage() {
       } else {
         inputRefs.current[5]?.focus();
       }
+
       return;
     }
 
-    // Обработка ввода одной цифры
-    const digit = value.slice(-1);
-    if (!/^\d$/.test(digit) && digit !== "") {
-      return;
-    }
+    // Обычный ввод одной цифры
+    if (/^\d$/.test(value) || value === "") {
+      // Обновляем текущее поле
+      const newCode = [...code];
+      newCode[index] = value;
+      setCode(newCode);
 
-    setCode((prevCode) => {
-      const newCode = [...prevCode];
-      newCode[index] = digit;
-      return newCode;
-    });
-
-    // Если ввели цифру, переходим к следующему полю
-    if (digit && index < 5) {
-      requestAnimationFrame(() => {
-        inputRefs.current[index + 1]?.focus();
-      });
+      // Если ввели цифру и это не последнее поле, переходим к следующему
+      if (value && index < 5) {
+        // Используем как requestAnimationFrame (для ПК), так и setTimeout (для мобильных)
+        if (navigator.userAgent.match(/iPhone|iPad|iPod|Android/i)) {
+          setTimeout(() => {
+            inputRefs.current[index + 1]?.focus();
+          }, 10);
+        } else {
+          requestAnimationFrame(() => {
+            inputRefs.current[index + 1]?.focus();
+          });
+        }
+      }
     }
   };
 
@@ -148,27 +153,19 @@ export default function VerifyPage() {
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     // Обработка Backspace
     if (e.key === "Backspace") {
-      e.preventDefault();
-
-      setCode((prevCode) => {
-        const newCode = [...prevCode];
-
-        // Если текущее поле не пустое, просто очищаем его
-        if (newCode[index] !== "") {
-          newCode[index] = "";
-          return newCode;
-        }
-
-        // Если текущее поле пустое, очищаем предыдущее и перемещаем фокус туда
-        if (index > 0) {
-          newCode[index - 1] = "";
-          requestAnimationFrame(() => {
-            inputRefs.current[index - 1]?.focus();
-          });
-        }
-
-        return newCode;
-      });
+      // Если текущее поле не пустое, просто очищаем его
+      if (code[index] !== "") {
+        const newCode = [...code];
+        newCode[index] = "";
+        setCode(newCode);
+      }
+      // Если текущее поле пустое и это не первое поле, переходим к предыдущему
+      else if (index > 0) {
+        const newCode = [...code];
+        newCode[index - 1] = "";
+        setCode(newCode);
+        inputRefs.current[index - 1]?.focus();
+      }
     }
 
     // Обработка стрелок для навигации между полями
@@ -319,16 +316,19 @@ export default function VerifyPage() {
               }}
               id={`code-${index}`}
               data-index={index}
-              type="text"
-              maxLength={6}
+              type="tel"
+              maxLength={1}
               inputMode="numeric"
+              pattern="[0-9]*"
               value={digit}
-              autoComplete="off"
+              autoComplete="one-time-code"
               autoFocus={index === 0}
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onInput={handleInputEvent}
               onPaste={handlePaste}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              onFocus={(e) => (e.target as HTMLInputElement).select()}
               className="w-12 h-14 text-center text-xl font-bold rounded-lg 
                        bg-gradient-from/10 border-2 border-primary-border text-white
                        focus:outline-none focus:ring-2 focus:ring-blue-500/30"

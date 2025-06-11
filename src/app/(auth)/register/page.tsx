@@ -11,6 +11,7 @@ import Button from "@/components/common/Button/Button";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "../../../utils/apiUtils";
+import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function RegisterPage() {
   const { error, isLoading, setIsLoading, setError } = useAuth();
@@ -18,6 +19,10 @@ export default function RegisterPage() {
   const [captchaVerified, setCaptchaVerified] = useState<boolean>(false);
   const captchaRef = useRef<{ resetCaptcha: () => void }>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    document.title = PAGE_TITLES.REGISTER;
+  }, []);
 
   const {
     register,
