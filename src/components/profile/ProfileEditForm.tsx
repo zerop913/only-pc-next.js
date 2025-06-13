@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { User } from "@/contexts/AuthContext";
@@ -7,10 +7,11 @@ import { Edit2 } from "lucide-react";
 import Button from "@/components/common/Button/Button";
 import ProfileSectionHeader from "./ProfileSectionHeader";
 import { fetchApi } from "../../utils/apiUtils";
+import { IMaskInput } from "react-imask";
 
 interface ProfileEditFormProps {
   user: User;
-  onProfileUpdate: () => void; // Добавляем обработчик для обновления состояния родителя
+  onProfileUpdate: () => void;
 }
 
 const profileSchema = z.object({
@@ -24,7 +25,11 @@ const profileSchema = z.object({
     .optional(),
   phoneNumber: z
     .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, "Некорректный номер телефона")
+    .min(10, "Введите полный номер телефона")
+    .regex(
+      /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
+      "Некорректный формат номера телефона"
+    )
     .optional(),
   city: z
     .string()
@@ -48,6 +53,7 @@ export default function ProfileEditForm({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -70,7 +76,35 @@ export default function ProfileEditForm({
           const data = await response.json();
           // Добавляем проверку, существует ли data.profile
           if (data && data.profile) {
-            reset(data.profile);
+            // Для номера телефона форматируем его, если он существует, но не в нужном формате
+            let phoneNumber = data.profile.phoneNumber || "";
+
+            // Если номер телефона не соответствует маске, но является корректным номером
+            if (
+              phoneNumber &&
+              !phoneNumber.match(/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/)
+            ) {
+              // Удаляем все нецифры, кроме + в начале
+              const digitsOnly = phoneNumber.replace(/[^\d+]/g, "");
+
+              // Если номер не начинается с +7, добавляем префикс
+              if (!digitsOnly.startsWith("+7")) {
+                // Удаляем + если он есть
+                const withoutPlus = digitsOnly.replace(/^\+/, "");
+
+                // Если начинается с 7, оставляем, иначе добавляем 7
+                phoneNumber = withoutPlus.startsWith("7")
+                  ? `+${withoutPlus}`
+                  : `+7${withoutPlus}`;
+              } else {
+                phoneNumber = digitsOnly;
+              }
+            }
+
+            reset({
+              ...data.profile,
+              phoneNumber,
+            });
           } else {
             // Если профиль не найден, установим пустой объект
             reset({
@@ -89,17 +123,43 @@ export default function ProfileEditForm({
     fetchProfile();
   }, [reset, user.id]);
 
+  // Функция для очистки номера телефона от форматирования
+  const cleanPhoneNumber = (phone: string | undefined): string => {
+    if (!phone) return "";
+
+    // Удаляем все символы, кроме цифр и знака +
+    const cleaned = phone.replace(/[^\d+]/g, "");
+
+    if (cleaned.startsWith("+7")) {
+      return cleaned;
+    }
+
+    if (cleaned.startsWith("7")) {
+      return "+" + cleaned;
+    }
+
+    return "+7" + cleaned;
+  };
+
   const onSubmit = async (data: ProfileFormValues) => {
     setIsLoading(true);
     setMessage(null);
     try {
+      // Очищаем номер телефона от форматирования перед отправкой
+      const cleanedData = {
+        ...data,
+        phoneNumber: cleanPhoneNumber(data.phoneNumber),
+      };
+
+      console.log("Отправка номера телефона:", cleanedData.phoneNumber);
+
       const response = await fetchApi("/api/profile", {
         method: "PUT",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       });
 
       const result = await response.json();
@@ -113,12 +173,14 @@ export default function ProfileEditForm({
         // Вызываем функцию обновления родительского компонента
         onProfileUpdate();
       } else {
+        console.error("Ошибка обновления профиля:", result);
         setMessage({
           type: "error",
           text: result.error || "Произошла ошибка при обновлении профиля",
         });
       }
     } catch (error) {
+      console.error("Ошибка при запросе на обновление профиля:", error);
       setMessage({
         type: "error",
         text: "Произошла ошибка при обновлении профиля",
@@ -190,12 +252,24 @@ export default function ProfileEditForm({
             >
               Телефон
             </label>
-            <input
-              {...register("phoneNumber")}
-              type="text"
-              id="phoneNumber"
-              className="w-full px-4 py-2 rounded-lg bg-gradient-from/20 border border-primary-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              placeholder="+7XXXXXXXXXX"
+            <Controller
+              name="phoneNumber"
+              control={control}
+              render={({ field }) => (
+                <IMaskInput
+                  mask="+{7} (000) 000-00-00"
+                  definitions={{
+                    "#": /[1-9]/,
+                  }}
+                  type="tel"
+                  id="phoneNumber"
+                  value={field.value || ""}
+                  onAccept={(value) => field.onChange(value)}
+                  className="w-full px-4 py-2 rounded-lg bg-gradient-from/20 border border-primary-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  placeholder="+7 (___) ___-__-__"
+                  unmask={false}
+                />
+              )}
             />
             {errors.phoneNumber && (
               <p className="text-red-400 text-xs mt-1">

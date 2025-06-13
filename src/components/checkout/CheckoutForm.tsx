@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useCart } from "@/contexts/CartContext";
-import { useCheckout } from "@/contexts/CheckoutContext"; 
+import { useCheckout } from "@/contexts/CheckoutContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import CustomerInfoForm from "./CustomerInfoForm";
@@ -258,10 +258,10 @@ export default function CheckoutForm() {
 
       // Рассчитываем общую стоимость
       const subtotal = getTotalPrice();
-      const deliveryPriceNumber = selectedDeliveryMethod?.price 
-        ? parseFloat(selectedDeliveryMethod.price) 
+      const deliveryPriceNumber = selectedDeliveryMethod?.price
+        ? parseFloat(selectedDeliveryMethod.price)
         : 0;
-      
+
       // Обновляем данные в контексте CheckoutContext перед переходом на страницу оплаты
       setCheckoutData({
         buildId: Number(firstItem.id),
@@ -273,7 +273,7 @@ export default function CheckoutForm() {
         comment: "",
         subtotal: subtotal,
         deliveryPrice: deliveryPriceNumber,
-        total: subtotal + deliveryPriceNumber
+        total: subtotal + deliveryPriceNumber,
       });
 
       // Определяем метод оплаты и перенаправляем на соответствующую страницу

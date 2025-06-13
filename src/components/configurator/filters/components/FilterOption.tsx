@@ -12,19 +12,26 @@ export default function FilterOption({
   isSelected,
   onChange,
 }: FilterOptionProps) {
+  // Определяем, доступна ли опция (количество больше 0 или опция уже выбрана)
+  const isAvailable = option.count > 0 || isSelected;
+
   return (
-    <label className="flex items-center gap-3 cursor-pointer group hover:bg-gradient-from/10">
+    <label
+      className={`flex items-center gap-3 group hover:bg-gradient-from/10 
+        ${!isAvailable ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+    >
       <input
         type="checkbox"
         checked={isSelected}
-        onChange={onChange}
+        onChange={isAvailable ? onChange : undefined}
+        disabled={!isAvailable && !isSelected}
         className="hidden"
       />
       <div
         className={`w-5 h-5 rounded-md border transition-all duration-200 flex items-center justify-center ${
           isSelected
             ? "bg-blue-500 border-blue-500"
-            : "border-primary-border bg-gradient-from/20 group-hover:border-blue-400"
+            : `border-primary-border bg-gradient-from/20 ${isAvailable ? "group-hover:border-blue-400" : ""}`
         }`}
       >
         {isSelected && <CheckIcon className="w-3.5 h-3.5 text-white" />}
@@ -33,11 +40,15 @@ export default function FilterOption({
         className={`text-sm transition-colors flex-1 flex justify-between items-center ${
           isSelected
             ? "text-white"
-            : "text-secondary-light group-hover:text-white"
+            : `text-secondary-light ${isAvailable ? "group-hover:text-white" : ""}`
         }`}
       >
         <span>{option.label}</span>
-        <span className="text-secondary-light text-xs">{option.count}</span>
+        <span
+          className={`text-xs ${option.count === 0 && !isSelected ? "text-red-400" : "text-secondary-light"}`}
+        >
+          {option.count}
+        </span>
       </span>
     </label>
   );

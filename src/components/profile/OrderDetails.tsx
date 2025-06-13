@@ -235,12 +235,32 @@ export function OrderDetails({ order: initialOrder }: OrderDetailsProps) {
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gradient-to-br from-primary-lighter/10 to-primary/5 group-hover:shadow-lg transition-all">
                       <Image
                         src={(() => {
-                          const caseSlug =
-                            item.buildSnapshot?.components?.korpusa;
-                          if (!caseSlug) {
-                            return "/icons/case.svg";
+                          // Проверяем наличие поля image в buildSnapshot
+                          if (item.buildSnapshot?.image) {
+                            return item.buildSnapshot.image.startsWith("/")
+                              ? item.buildSnapshot.image
+                              : `/${item.buildSnapshot.image}`;
                           }
-                          return `/images/korpusa/${caseSlug}.jpg`;
+
+                          // Проверяем компоненты
+                          const components = item.buildSnapshot?.components;
+                          // Если компоненты есть, пробуем получить slug корпуса
+                          if (components && components.korpusa) {
+                            // Проверяем, является ли korpusa объектом с полем name
+                            if (
+                              typeof components.korpusa === "object" &&
+                              components.korpusa.name
+                            ) {
+                              return `/images/korpusa/${components.korpusa.name}.jpg`;
+                            }
+                            // Если это строка (slug)
+                            else if (typeof components.korpusa === "string") {
+                              return `/images/korpusa/${components.korpusa}.jpg`;
+                            }
+                          }
+
+                          // Если ничего не подошло, возвращаем дефолтную иконку
+                          return "/icons/case.svg";
                         })()}
                         alt={item.buildSnapshot?.name || "Компьютерная сборка"}
                         fill

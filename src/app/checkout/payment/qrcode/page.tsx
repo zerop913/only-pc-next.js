@@ -153,19 +153,17 @@ export default function QrCodePaymentPage() {
           type: item.type,
           components: item.components,
         }));
-
         const orderResponse = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            buildId: checkoutData.buildId,
             deliveryMethodId: checkoutData.deliveryMethodId,
             paymentMethodId: checkoutData.paymentMethodId,
             deliveryAddressId: checkoutData.deliveryAddressId,
             comment: checkoutData.comment || "",
             paidAt: new Date().toISOString(),
             paymentStatus: "paid",
-            cartItems: orderItems,
+            cartItems: orderItems, // Передаем все элементы корзины
           }),
         });
 

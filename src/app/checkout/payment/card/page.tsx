@@ -178,7 +178,7 @@ export default function CardPaymentPage() {
 
       if (!paymentResult.ok || !paymentData.success) {
         throw new Error(paymentData.error || "Ошибка при обработке платежа");
-      } // После успешной оплаты создаем заказ в системе
+      }      // После успешной оплаты создаем заказ в системе
       // Передаем информацию о всех товарах в корзине
       const orderItems = cartItems.map((item) => ({
         id: item.id,
@@ -188,13 +188,10 @@ export default function CardPaymentPage() {
         image: item.image,
         type: item.type,
         components: item.components,
-      }));
-
-      const response = await fetch("/api/orders", {
+      }));      const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          buildId: checkoutData.buildId,
           deliveryMethodId: checkoutData.deliveryMethodId,
           paymentMethodId: checkoutData.paymentMethodId,
           deliveryAddressId: checkoutData.deliveryAddressId,
@@ -202,7 +199,7 @@ export default function CardPaymentPage() {
           paidAt: new Date().toISOString(), // Добавляем информацию о дате оплаты
           paymentStatus: "paid", // Указываем статус оплаты
           paymentId: paymentData.paymentId, // Добавляем ID платежа
-          cartItems: orderItems, // Добавляем элементы корзины
+          cartItems: orderItems // Добавляем ВСЕ элементы корзины
         }),
       });
 

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { Filter } from "../types/filters";
 import FilterOption from "./FilterOption";
+import { useRef, useEffect, useState } from "react";
 
 interface FilterGroupProps {
   filter: Filter;
@@ -20,6 +21,17 @@ export default function FilterGroup({
   onOptionChange,
   selectedValues,
 }: FilterGroupProps) {
+  // Сохраняем предыдущие опции, чтобы не было скачков при обновлении
+  const [cachedOptions, setCachedOptions] = useState(filter.options);
+
+  // Обновляем кешированные опции только если новые опции действительно изменились
+  useEffect(() => {
+    // Проверяем, действительно ли нужно обновить кешированные опции
+    if (filter.options.length > 0) {
+      setCachedOptions(filter.options);
+    }
+  }, [filter.options]);
+
   return (
     <div className="bg-gradient-from/10 rounded-lg p-4 border border-primary-border/30 hover:border-primary-border/50 transition-all duration-300">
       <button
@@ -50,15 +62,22 @@ export default function FilterGroup({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
+            {" "}
             <div className="space-y-2.5 pl-1 mt-3">
-              {filter.options.map((option) => (
-                <FilterOption
-                  key={option.value}
-                  option={option}
-                  isSelected={selectedValues.has(option.value)}
-                  onChange={() => onOptionChange(option.value)}
-                />
-              ))}
+              {filter.options
+                // Фильтруем опции: показываем только те, что имеют count > 0 или уже выбраны
+                .filter(
+                  (option) =>
+                    option.count > 0 || selectedValues.has(option.value)
+                )
+                .map((option) => (
+                  <FilterOption
+                    key={option.value}
+                    option={option}
+                    isSelected={selectedValues.has(option.value)}
+                    onChange={() => onOptionChange(option.value)}
+                  />
+                ))}
             </div>
           </motion.div>
         )}

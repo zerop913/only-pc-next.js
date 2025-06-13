@@ -52,6 +52,8 @@ export interface OrderItem {
     name: string;
     components: Record<string, any>;
     totalPrice: string;
+    type?: string;
+    image?: string;
   } | null;
 }
 

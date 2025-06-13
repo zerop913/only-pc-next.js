@@ -5,7 +5,10 @@ import {
   getProductsByCategory,
   getProductsBySubcategory,
 } from "@/services/productService";
-import { getCategoryFilters } from "@/services/filterService";
+import {
+  getCategoryFilters,
+  getDynamicFilters,
+} from "@/services/filterService";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     try {
       if (isFilterRequest) {
-        return await handleFilterRequest(pathSegments);
+        return await handleFilterRequest(pathSegments, request);
       } else if (isProductRequest) {
         return await handleProductRequest(pathSegments);
       } else {
@@ -67,9 +70,29 @@ export async function GET(request: NextRequest) {
 }
 
 // Обработчики запросов
-async function handleFilterRequest(pathSegments: string[]) {
+async function handleFilterRequest(
+  pathSegments: string[],
+  request: NextRequest
+) {
   const categorySlug = pathSegments[0];
   const subcategorySlug = pathSegments[1];
+  const url = new URL(request.url);
+
+  // Проверяем запрашиваются ли динамические фильтры
+  const isDynamic = url.searchParams.get("dynamic") === "true";
+  let activeFilters: ProductFilters | undefined;
+
+  // Если запрашиваются динамические фильтры, извлекаем данные о фильтрах
+  if (isDynamic) {
+    const filterDataParam = url.searchParams.get("filterData");
+    if (filterDataParam) {
+      try {
+        activeFilters = JSON.parse(decodeURIComponent(filterDataParam));
+      } catch (error) {
+        console.error("Failed to parse filter data:", error);
+      }
+    }
+  }
 
   const category = await db
     .select()
@@ -97,11 +120,23 @@ async function handleFilterRequest(pathSegments: string[]) {
       throw { message: "Subcategory not found", status: 404 };
     }
 
-    const filterOptions = await getCategoryFilters(subcategory[0].id);
+    // Если запрашиваются динамические фильтры и есть данные о фильтрах, используем getDynamicFilters
+    let filterOptions;
+    if (isDynamic && activeFilters) {
+      filterOptions = await getDynamicFilters(subcategory[0].id, activeFilters);
+    } else {
+      filterOptions = await getCategoryFilters(subcategory[0].id);
+    }
     return NextResponse.json(filterOptions);
   }
 
-  const filterOptions = await getCategoryFilters(category[0].id);
+  // Если запрашиваются динамические фильтры и есть данные о фильтрах, используем getDynamicFilters
+  let filterOptions;
+  if (isDynamic && activeFilters) {
+    filterOptions = await getDynamicFilters(category[0].id, activeFilters);
+  } else {
+    filterOptions = await getCategoryFilters(category[0].id);
+  }
   return NextResponse.json(filterOptions);
 }
 

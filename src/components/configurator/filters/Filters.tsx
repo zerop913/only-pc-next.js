@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { FunnelIcon } from "@heroicons/react/24/outline";
-import { FiltersResponse } from "./types/filters";
+import { FiltersResponse, Filter } from "./types/filters";
 import FilterGroup from "./components/FilterGroup";
 import PriceFilter from "./components/PriceFilter";
 import MobileFilterView from "./components/MobileFilterView";
@@ -148,7 +148,7 @@ export default function Filters({
             selectedValues={selectedFilters.brand}
           />
 
-          {filtersData.characteristics.map((filter) => (
+          {filtersData.characteristics.map((filter: Filter) => (
             <FilterGroup
               key={filter.id}
               filter={filter}

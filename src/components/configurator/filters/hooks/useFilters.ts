@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { FiltersResponse, SelectedFilters } from "../types/filters";
+import {
+  FiltersResponse,
+  SelectedFilters,
+  ProductFilters,
+  Filter,
+} from "../types/filters";
 
 const INITIAL_VISIBLE_FILTERS = 5; // Добавляем константу
 
@@ -14,20 +19,51 @@ interface UseFiltersProps {
   subcategorySlug?: string;
 }
 
+interface UseFiltersReturn {
+  filtersData: FiltersResponse | undefined;
+  selectedFilters: SelectedFilters;
+  expandedFilters: Record<string, boolean>;
+  handleFilterChange: (
+    filterSlug: string,
+    value: string,
+    isCharacteristic: boolean
+  ) => void;
+  toggleFilter: (type: string) => void;
+  handlePriceRangeChange: (newRange: [number, number]) => void;
+  handleClearFilters: () => void;
+  isResetting: boolean;
+}
+
 // Функция загрузки фильтров
 const fetchFilters = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Failed to fetch filters");
+  console.log("Fetching filters from:", url);
+  try {
+    const response = await fetch(url);
+    console.log("Response status:", response.status);
+    console.log("Response headers:", response.headers);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API Error:", response.status, errorText);
+      throw new Error(
+        `Failed to fetch filters: ${response.status} ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    console.log("Filters data received:", data);
+    return data;
+  } catch (error) {
+    console.error("Fetch error:", error);
+    throw error;
   }
-  return response.json();
 };
 
 export function useFilters({
   onFilterChange,
   categorySlug,
   subcategorySlug,
-}: UseFiltersProps) {
+}: UseFiltersProps): UseFiltersReturn {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedFilters, setSelectedFilters] = useState<SelectedFilters>({
@@ -39,22 +75,50 @@ export function useFilters({
     Record<string, boolean>
   >({});
   const [isResetting, setIsResetting] = useState(false);
-
-  // URL для загрузки фильтров
+  const [activeFilters, setActiveFilters] = useState<ProductFilters>({});
+  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
+  const [previousFiltersData, setPreviousFiltersData] = useState<
+    FiltersResponse | undefined
+  >(undefined);
   const filtersUrl = categorySlug
     ? `/api/products/${categorySlug}${
         subcategorySlug ? `/${subcategorySlug}` : ""
-      }?filters=true`
+      }?filters=true${
+        Object.keys(activeFilters).length > 0
+          ? `&dynamic=true&filterData=${encodeURIComponent(JSON.stringify(activeFilters))}`
+          : ""
+      }`
     : null;
 
-  // Используем SWR для загрузки фильтров
-  const { data: filtersData } = useSWR<FiltersResponse>(
+  // Используем SWR для загрузки фильтров с обработчиками для отслеживания состояния загрузки
+  const {
+    data: filtersData,
+    mutate: refreshFiltersData,
+    isValidating,
+  } = useSWR(
+    // Если есть URL, используем его как ключ
     filtersUrl,
-    filtersUrl ? fetchFilters : null,
+    // Типизированная функция для загрузки фильтров
+    filtersUrl ? (url: string) => fetchFilters(url) : null,
     {
       revalidateOnFocus: false,
       revalidateIfStale: false,
       dedupingInterval: 60000,
+      onLoadingSlow: () => {
+        setIsLoadingFilters(true);
+      },
+      onSuccess: (data) => {
+        setIsLoadingFilters(false);
+        // Сохраняем текущие данные как предыдущие для следующих обновлений
+        if (data) {
+          setPreviousFiltersData(data);
+        }
+      },
+      onError: () => {
+        setIsLoadingFilters(false);
+      },
+      // Используем предыдущие данные во время загрузки новых
+      fallbackData: previousFiltersData,
     }
   );
 
@@ -65,10 +129,9 @@ export function useFilters({
         brand: true,
         price: true,
       };
-
       filtersData.characteristics
         .slice(0, INITIAL_VISIBLE_FILTERS - 1)
-        .forEach((filter) => {
+        .forEach((filter: Filter) => {
           initialExpanded[filter.slug] = true;
         });
 
@@ -113,7 +176,6 @@ export function useFilters({
 
     setSelectedFilters(newFilters);
   }, [searchParams, filtersData]);
-
   const handleFilterChange = useCallback(
     async (filterSlug: string, value: string, isCharacteristic: boolean) => {
       // Перемещаем логику в асинхронный колбэк
@@ -125,9 +187,34 @@ export function useFilters({
 
         newFilters.characteristics.forEach((values, slug) => {
           apiFilters[`char[${slug}]`] = Array.from(values);
+        }); // Обновляем активные фильтры для динамического обновления состояния фильтров
+        const newActiveFilters: ProductFilters = {
+          brands:
+            newFilters.brand.size > 0
+              ? Array.from(newFilters.brand)
+              : undefined,
+          characteristics: {},
+        };
+
+        if (newFilters.priceRange[0] !== 0 || newFilters.priceRange[1] !== 0) {
+          newActiveFilters.priceMin = newFilters.priceRange[0];
+          newActiveFilters.priceMax = newFilters.priceRange[1];
+        }
+
+        newFilters.characteristics.forEach((values, slug) => {
+          if (!newActiveFilters.characteristics)
+            newActiveFilters.characteristics = {};
+          newActiveFilters.characteristics[slug] = Array.from(values);
         });
 
+        // Устанавливаем активные фильтры для получения динамических фильтров
+        setActiveFilters(newActiveFilters);
+
+        // И выполняем фильтрацию товаров
         await onFilterChange(apiFilters, newFilters.priceRange);
+
+        // Вручную обновляем данные фильтров
+        await refreshFiltersData();
       };
 
       setSelectedFilters((prev) => {
@@ -160,7 +247,7 @@ export function useFilters({
         return newFilters;
       });
     },
-    [onFilterChange]
+    [onFilterChange, refreshFiltersData]
   );
 
   const toggleFilter = useCallback((type: string) => {
@@ -169,7 +256,6 @@ export function useFilters({
       [type]: !prev[type],
     }));
   }, []);
-
   const handlePriceRangeChange = useCallback(
     (newRange: [number, number]) => {
       setSelectedFilters((prev) => ({
@@ -187,11 +273,33 @@ export function useFilters({
         apiFilters[`char[${slug}]`] = Array.from(values);
       });
 
-      onFilterChange(apiFilters, newRange);
-    },
-    [selectedFilters, onFilterChange]
-  );
+      // Обновляем активные фильтры для динамического обновления
+      const newActiveFilters: ProductFilters = {
+        priceMin: newRange[0],
+        priceMax: newRange[1],
+        brands:
+          selectedFilters.brand.size > 0
+            ? Array.from(selectedFilters.brand)
+            : undefined,
+        characteristics: {},
+      };
 
+      selectedFilters.characteristics.forEach((values, slug) => {
+        if (!newActiveFilters.characteristics)
+          newActiveFilters.characteristics = {};
+        newActiveFilters.characteristics[slug] = Array.from(values);
+      });
+
+      // Обновляем активные фильтры
+      setActiveFilters(newActiveFilters);
+
+      onFilterChange(apiFilters, newRange);
+
+      // Обновляем данные фильтров
+      refreshFiltersData();
+    },
+    [selectedFilters, onFilterChange, refreshFiltersData]
+  );
   const handleClearFilters = useCallback(() => {
     if (filtersData?.priceRange) {
       setIsResetting(true);
@@ -205,14 +313,20 @@ export function useFilters({
       };
 
       setSelectedFilters(newFilters);
+      // Очищаем активные фильтры
+      setActiveFilters({});
+
       onFilterChange({}, [
         filtersData.priceRange.min,
         filtersData.priceRange.max,
       ]);
 
+      // Обновляем данные фильтров
+      refreshFiltersData();
+
       setTimeout(() => setIsResetting(false), 100);
     }
-  }, [filtersData, onFilterChange]);
+  }, [filtersData, onFilterChange, refreshFiltersData]);
 
   return {
     filtersData,
