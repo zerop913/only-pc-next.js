@@ -842,7 +842,17 @@ export async function getBuildCompatibilityResult(
     }
 
     // Преобразуем строку JSON в объект
-    const componentsObj = JSON.parse(build.components);
+    let componentsObj;
+    try {
+      // Проверяем, является ли значение строкой или объектом
+      componentsObj =
+        typeof build.components === "string"
+          ? JSON.parse(build.components)
+          : build.components;
+    } catch (error) {
+      console.error("Ошибка при разборе компонентов сборки:", error);
+      componentsObj = {};
+    }
 
     // Преобразуем объект компонентов в массив и проверяем совместимость
     const componentsArray = Object.entries(componentsObj).map(
@@ -852,9 +862,8 @@ export async function getBuildCompatibilityResult(
       })
     );
 
-    const compatibilityResult = await checkComponentsCompatibility(
-      componentsArray
-    );
+    const compatibilityResult =
+      await checkComponentsCompatibility(componentsArray);
 
     // Преобразуем результат в нужный формат
     return {
@@ -1439,8 +1448,8 @@ export function checkPowerConnectorsCompatibility(
       psu8pinCount = pin8Match
         ? parseInt(pin8Match[1])
         : normalizedPsu.includes("8 pin")
-        ? 1
-        : 0;
+          ? 1
+          : 0;
     }
 
     // Пытаемся распарсить количество 6 pin разъемов
@@ -1449,8 +1458,8 @@ export function checkPowerConnectorsCompatibility(
       psu6pinCount = pin6Match
         ? parseInt(pin6Match[1])
         : normalizedPsu.includes("6 pin")
-        ? 1
-        : 0;
+          ? 1
+          : 0;
     }
 
     // Проверяем наличие 12VHPWR
@@ -1469,8 +1478,8 @@ export function checkPowerConnectorsCompatibility(
       req8pinCount = req8Match
         ? parseInt(req8Match[1])
         : normalizedReq.includes("8 pin")
-        ? 1
-        : 0;
+          ? 1
+          : 0;
     }
 
     // Пытаемся распарсить количество требуемых 6 pin разъемов
@@ -1479,8 +1488,8 @@ export function checkPowerConnectorsCompatibility(
       req6pinCount = req6Match
         ? parseInt(req6Match[1])
         : normalizedReq.includes("6 pin")
-        ? 1
-        : 0;
+          ? 1
+          : 0;
     }
 
     // Проверяем требование 12VHPWR

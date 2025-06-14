@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProductCard from "@/components/configurator/products/ProductCard";
 import { Product } from "@/types/product";
-import { SearchResponse } from "@/types/search";
+import { SearchResponse, PcBuildProduct } from "@/types/search";
 import Pagination from "@/components/common/ui/Pagination";
 import SearchRelevance from "@/components/search/SearchRelevance";
 import { PAGE_TITLES } from "@/config/pageTitles";
+import BuildSearchResult from "@/components/search/BuildSearchResult";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -20,7 +21,6 @@ export default function SearchPage() {
   useEffect(() => {
     document.title = query ? `Поиск: "${query}" | OnlyPC` : PAGE_TITLES.SEARCH;
   }, [query]);
-
   useEffect(() => {
     const fetchResults = async () => {
       if (!query) {
@@ -31,7 +31,7 @@ export default function SearchPage() {
       setIsLoading(true);
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query)}&page=${page}`
+          `/api/search?q=${encodeURIComponent(query)}&page=${page}&includeBuilds=true`
         );
         if (response.ok) {
           const data = await response.json();
@@ -76,31 +76,42 @@ export default function SearchPage() {
         ) : results?.items.length ? (
           <>
             <div className="space-y-4">
-              {results.items.map((product) => {
+              {" "}
+              {results.items.map((item) => {
+                const isBuild = "isBuild" in item;
+
                 // Получаем категорию для формирования правильного URL
                 const navigateToProduct = () => {
-                  router.push(
-                    `/product/${product.slug}?category=${product.categoryId}`
-                  );
+                  if (isBuild) {
+                    router.push(`/catalog/${item.slug}`);
+                  } else {
+                    router.push(
+                      `/product/${item.slug}?category=${item.categoryId}`
+                    );
+                  }
                 };
 
                 return (
-                  <div
-                    key={product.id}
-                    className="group flex items-start gap-3"
-                  >
+                  <div key={item.id} className="group flex items-start gap-3">
                     <div className="flex-1" onClick={navigateToProduct}>
-                      <ProductCard
-                        product={product}
-                        onAddToFavorites={() => {}}
-                      />
+                      {isBuild ? (
+                        <BuildSearchResult
+                          build={item as PcBuildProduct}
+                          query={query}
+                        />
+                      ) : (
+                        <ProductCard
+                          product={item as Product}
+                          onAddToFavorites={() => {}}
+                        />
+                      )}
                     </div>
                     <div className="pt-4">
                       <SearchRelevance
                         query={query}
-                        title={product.title}
-                        description={product.description}
-                        brand={product.brand}
+                        title={item.title}
+                        description={item.description || ""}
+                        brand={item.brand}
                       />
                     </div>
                   </div>

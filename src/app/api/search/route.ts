@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
       | "relevance"
       | "price_asc"
       | "price_desc";
+    const includePcBuilds = searchParams.get("includeBuilds") === "true";
 
     if (!query.trim()) {
       return NextResponse.json({
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
       page,
       limit,
       sort,
+      includePcBuilds,
     });
 
     return NextResponse.json({

@@ -37,7 +37,7 @@ const SearchBar = ({
 
       try {
         const response = await fetch(
-          `/api/search/suggestions?q=${encodeURIComponent(searchValue)}`
+          `/api/search/suggestions?q=${encodeURIComponent(searchValue)}&includeBuilds=true`
         );
         if (response.ok) {
           const data = await response.json();
