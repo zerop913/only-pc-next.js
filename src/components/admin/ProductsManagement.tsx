@@ -4,6 +4,8 @@ import { CategoryWithChildren } from "@/types/category";
 import { Package, Info as InfoIcon, Search, Plus } from "lucide-react";
 import ProductDetailsModal from "./modals/ProductDetailsModal";
 import AddProductModal from "./modals/AddProductModal";
+import EditProductModal from "./modals/EditProductModal";
+import DeleteProductModal from "./modals/DeleteProductModal";
 import ProductItem from "./ProductItem";
 import Pagination from "../common/ui/Pagination";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -29,6 +31,11 @@ export default function ProductsManagement({ ref }: { ref?: any }) {
     null
   );
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [originalCategories, setOriginalCategories] = useState<
     CategoryWithChildren[]
   >([]);
@@ -162,6 +169,94 @@ export default function ProductsManagement({ ref }: { ref?: any }) {
     setShowDetailsModal(true);
   };
 
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    setDeletingProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingProduct) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/products/${deletingProduct.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete product");
+      }
+
+      // Обновляем список товаров
+      await fetchProducts(currentPage, debouncedSearch, selectedCategory);
+
+      setShowDeleteModal(false);
+      setDeletingProduct(null);
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert(`Ошибка при удалении товара: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeletingProduct(null);
+  };
+
+  const handleSaveProduct = async (productData: any) => {
+    try {
+      const formData = new FormData();
+
+      // Добавляем основные поля
+      formData.append("title", productData.title);
+      formData.append("price", productData.price.toString());
+      formData.append("brand", productData.brand);
+      formData.append("description", productData.description);
+      formData.append("categoryId", productData.categoryId.toString());
+
+      // Добавляем характеристики
+      formData.append(
+        "characteristics",
+        JSON.stringify(productData.characteristics)
+      );
+
+      // Добавляем изображение, если оно есть
+      if (productData.image) {
+        formData.append("image", productData.image);
+      }
+
+      const response = await fetch(`/api/admin/products/${productData.id}`, {
+        method: "PUT",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update product");
+      }
+
+      // Обновляем список товаров
+      setIsLoading(true);
+      await fetchProducts(currentPage, debouncedSearch);
+
+      setShowEditModal(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -254,6 +349,8 @@ export default function ProductsManagement({ ref }: { ref?: any }) {
               key={product.id}
               product={product}
               onClick={() => handleProductClick(product)}
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteProduct}
             />
           ))}
         </div>
@@ -287,7 +384,33 @@ export default function ProductsManagement({ ref }: { ref?: any }) {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         categories={originalCategories}
+        onSuccess={() => {
+          fetchProducts(currentPage, debouncedSearch, selectedCategory); // Обновляем список товаров после добавления
+        }}
       />
+
+      {editingProduct && (
+        <EditProductModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingProduct(null);
+          }}
+          onSave={handleSaveProduct}
+          categories={originalCategories}
+          product={editingProduct}
+        />
+      )}
+
+      {deletingProduct && (
+        <DeleteProductModal
+          isOpen={showDeleteModal}
+          onClose={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+          product={deletingProduct}
+          isLoading={isDeleting}
+        />
+      )}
     </div>
   );
 }

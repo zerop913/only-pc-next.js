@@ -7,10 +7,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/common/ui/tabs";
-import { Users, Package, FolderTree, Settings } from "lucide-react";
+import { Users, Package, FolderTree, Settings, Settings2 } from "lucide-react";
 import UsersManagement from "@/components/admin/UsersManagement";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import ProductsManagement from "@/components/admin/ProductsManagement";
+import CompatibilityManagement from "@/components/admin/CompatibilityManagement";
 import { PAGE_TITLES } from "@/config/pageTitles";
 
 interface ProductsManagementRef {
@@ -65,6 +66,10 @@ export default function AdminPanel() {
               <FolderTree className="w-4 h-4 mr-2" />
               <span className="whitespace-nowrap">Категории</span>
             </TabsTrigger>
+            <TabsTrigger value="compatibility">
+              <Settings2 className="w-4 h-4 mr-2" />
+              <span className="whitespace-nowrap">Совместимость</span>
+            </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
               <span className="whitespace-nowrap">Настройки</span>
@@ -94,6 +99,12 @@ export default function AdminPanel() {
           <TabsContent value="products">
             <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
               <ProductsManagement ref={productsRef} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="compatibility">
+            <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
+              <CompatibilityManagement />
             </div>
           </TabsContent>
 

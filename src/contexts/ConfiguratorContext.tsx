@@ -17,6 +17,7 @@ import {
   setStandardCookie,
   COOKIE_KEYS,
 } from "@/utils/cookieUtils";
+import { configuratorLogger } from "@/lib/utils/debugLogger";
 
 export interface SelectedProduct {
   categoryId: number;
@@ -32,7 +33,6 @@ interface SavedConfiguration {
 // Добавляем константу для времени жизни - 7 дней (в миллисекундах)
 const CONFIG_TTL = 7 * 24 * 60 * 60 * 1000;
 const CONFIG_STORAGE_KEY = "pc-configuration";
-// Используем константу из cookieUtils
 const CONFIG_COOKIE_KEY = COOKIE_KEYS.CONFIGURATOR;
 
 interface ConfiguratorContextType {
@@ -323,13 +323,13 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Обработчики для модального окна проверки совместимости
   const openCompatibilityCheckModal = useCallback(async () => {
-    console.log(
+    configuratorLogger.log(
       "Открытие модального окна проверки совместимости, выбранные компоненты:",
       selectedComponents
     );
 
     // Более глубокая отладка для выявления проблемы
-    console.log(
+    configuratorLogger.log(
       "Формат selectedComponents:",
       Object.entries(selectedComponents || {}).map(
         ([categorySlug, productSlug]) => ({
@@ -361,7 +361,7 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
         setCompatibilityResults(data);
         setIsCompatibilityCheckModalOpen(true);
       } else {
-        console.error(
+        configuratorLogger.error(
           "Ошибка при проверке совместимости:",
           response.statusText
         );
@@ -374,7 +374,7 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsCompatibilityCheckModalOpen(true);
       }
     } catch (error) {
-      console.error("Ошибка при проверке совместимости:", error);
+      configuratorLogger.error("Ошибка при проверке совместимости:", error);
       // Создаем базовый результат при ошибке
       setCompatibilityResults({
         compatible: false,

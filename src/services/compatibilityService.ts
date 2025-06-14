@@ -19,6 +19,21 @@ import {
   characteristicsTypes,
 } from "@/lib/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
+import { compatibilityLogger } from "@/lib/utils/debugLogger";
+
+// Простое кэширование результатов для избежания повторных вычислений
+const compatibilityCache = new Map<string, CompatibilityResult>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
+/**
+ * Создает ключ кэша для набора компонентов
+ */
+function createCacheKey(components: Component[]): string {
+  return components
+    .sort((a, b) => `${a.categorySlug}:${a.slug}`.localeCompare(`${b.categorySlug}:${b.slug}`))
+    .map(c => `${c.categorySlug}:${c.slug}`)
+    .join('|');
+}
 
 /**
  * Проверяет совместимость всех компонентов в сборке и возвращает детальный результат
@@ -29,16 +44,24 @@ export async function checkComponentsCompatibility(
   components: Component[]
 ): Promise<CompatibilityResult> {
   try {
-    console.log("Сервис получил компоненты:", components);
+    compatibilityLogger.log("Сервис получил компоненты:", components);
 
     // Проверяем, что массив компонентов не пустой
     if (!components || components.length < 2) {
-      console.log("Недостаточно компонентов для проверки, нужно минимум 2");
+      compatibilityLogger.log("Недостаточно компонентов для проверки, нужно минимум 2");
       return {
         compatible: true,
         issues: [],
         componentPairs: [],
       };
+    }
+
+    // Проверяем кэш
+    const cacheKey = createCacheKey(components);
+    const cached = compatibilityCache.get(cacheKey);
+    if (cached) {
+      compatibilityLogger.log("Результат взят из кэша");
+      return cached;
     }
 
     // Получаем все категории для проверки родительских отношений
@@ -60,7 +83,7 @@ export async function checkComponentsCompatibility(
       }
     }
 
-    console.log(
+    compatibilityLogger.log(
       "Карта категорий и родителей:",
       Object.fromEntries(categoryParentMap)
     );
@@ -94,12 +117,12 @@ export async function checkComponentsCompatibility(
 
     // Формируем карту наличия категорий в сборке с учетом родительских категорий
     components.forEach((comp) => {
-      console.log(`Проверка компонента: ${comp.categorySlug}`);
+      compatibilityLogger.log(`Проверка компонента: ${comp.categorySlug}`);
 
       // Проверяем сначала саму категорию
       requiredCategories.forEach((cat) => {
         if (cat.slug.includes(comp.categorySlug)) {
-          console.log(
+          compatibilityLogger.log(
             `Найдена обязательная категория: ${cat.name} для ${comp.categorySlug}`
           );
           categoryMap.set(cat.name, true);
@@ -109,12 +132,12 @@ export async function checkComponentsCompatibility(
       // Проверяем, является ли категория подкатегорией одной из обязательных
       const parentSlug = categoryParentMap.get(comp.categorySlug);
       if (parentSlug) {
-        console.log(
+        compatibilityLogger.log(
           `Найдена родительская категория: ${parentSlug} для ${comp.categorySlug}`
         );
         requiredCategories.forEach((cat) => {
           if (cat.slug.includes(parentSlug)) {
-            console.log(
+            compatibilityLogger.log(
               `Найдена обязательная родительская категория: ${cat.name} для ${comp.categorySlug} (родитель: ${parentSlug})`
             );
             categoryMap.set(cat.name, true);
@@ -125,7 +148,7 @@ export async function checkComponentsCompatibility(
 
     // Проверяем отсутствующие обязательные категории
     requiredCategories.forEach((cat) => {
-      console.log(
+      compatibilityLogger.log(
         `Проверка наличия категории: ${cat.name}, существует: ${categoryMap.has(
           cat.name
         )}`
@@ -147,17 +170,17 @@ export async function checkComponentsCompatibility(
     // Подготавливаем запрос для получения ID продуктов по slug для всех компонентов
     const productsInfo = await Promise.all(
       components.map(async (component) => {
-        console.log("Поиск категории для:", component.categorySlug);
+        compatibilityLogger.log("Поиск категории для:", component.categorySlug);
         const category = await db.query.categories.findFirst({
           where: eq(categories.slug, component.categorySlug),
         });
 
         if (!category) {
-          console.log("Категория не найдена:", component.categorySlug);
+          compatibilityLogger.log("Категория не найдена:", component.categorySlug);
           throw new Error(`Категория ${component.categorySlug} не найдена`);
         }
 
-        console.log(
+        compatibilityLogger.log(
           "Поиск продукта:",
           component.slug,
           "в категории:",
@@ -171,7 +194,7 @@ export async function checkComponentsCompatibility(
         });
 
         if (!product) {
-          console.log(
+          compatibilityLogger.log(
             "Продукт не найден:",
             component.slug,
             "в категории:",
@@ -182,7 +205,7 @@ export async function checkComponentsCompatibility(
           );
         }
 
-        console.log("Найден продукт:", product.title, "ID:", product.id);
+        compatibilityLogger.log("Найден продукт:", product.title, "ID:", product.id);
 
         // Получаем характеристики продукта
         const characteristics = await db
@@ -214,7 +237,7 @@ export async function checkComponentsCompatibility(
       })
     );
 
-    console.log("Информация о продуктах с характеристиками:", productsInfo);
+    compatibilityLogger.log("Информация о продуктах с характеристиками:", productsInfo);
 
     // Создаем массив пар компонентов для проверки
     const componentPairs: CompatibilityEdge[] = [];
@@ -325,7 +348,7 @@ export async function checkComponentsCompatibility(
             motherboard.characteristics.find((c) => c.typeSlug === "sata_ports")
               ?.value || "0";
 
-          console.log(
+          compatibilityLogger.log(
             "Проверка совместимости накопителя и материнской платы:",
             {
               storageType,
@@ -348,7 +371,7 @@ export async function checkComponentsCompatibility(
           if (!storageCompatibilityResult.compatible) {
             isCompatible = false;
             reason = storageCompatibilityResult.reason;
-            console.log("Обнаружена несовместимость накопителя:", reason);
+            compatibilityLogger.log("Обнаружена несовместимость накопителя:", reason);
           }
         }
 
@@ -405,7 +428,7 @@ export async function checkComponentsCompatibility(
                 c.typeSlug === "rear_radiator"
             )?.value || "";
 
-          console.log("Проверка совместимости охлаждения и процессора:", {
+          compatibilityLogger.log("Проверка совместимости охлаждения и процессора:", {
             coolerType,
             coolerSocket,
             coolerTdpRating,
@@ -431,7 +454,7 @@ export async function checkComponentsCompatibility(
           if (!coolingCompatibilityResult.compatible) {
             isCompatible = false;
             reason = coolingCompatibilityResult.reason;
-            console.log("Обнаружена несовместимость охлаждения:", reason);
+            compatibilityLogger.log("Обнаружена несовместимость охлаждения:", reason);
           }
         }
 
@@ -480,7 +503,7 @@ export async function checkComponentsCompatibility(
           const dummyCoolerSocket = "universal";
           const dummyCoolerTdp = "9999";
 
-          console.log("Проверка совместимости охлаждения и корпуса:", {
+          compatibilityLogger.log("Проверка совместимости охлаждения и корпуса:", {
             coolerType,
             coolerHeight,
             caseMaxCoolerHeight,
@@ -502,7 +525,7 @@ export async function checkComponentsCompatibility(
           if (!coolingCaseCompatibilityResult.compatible) {
             isCompatible = false;
             reason = coolingCaseCompatibilityResult.reason;
-            console.log(
+            compatibilityLogger.log(
               "Обнаружена несовместимость охлаждения с корпусом:",
               reason
             );
@@ -511,7 +534,7 @@ export async function checkComponentsCompatibility(
 
         // Стандартная проверка совместимости по правилам из БД
         if (isCompatible && rulesQuery.length > 0) {
-          console.log(
+          compatibilityLogger.log(
             `Найдено ${rulesQuery.length} правил для проверки совместимости между категориями ${comp1.categoryName} и ${comp2.categoryName}`
           );
 
@@ -531,7 +554,7 @@ export async function checkComponentsCompatibility(
               .where(eq(compatibilityRuleCharacteristics.ruleId, rule.ruleId));
 
             for (const ruleChar of ruleCharacteristics) {
-              console.log(
+              compatibilityLogger.log(
                 `Проверка правила #${rule.ruleId} с типом сравнения: ${ruleChar.comparisonType}`
               );
 
@@ -544,7 +567,7 @@ export async function checkComponentsCompatibility(
               );
 
               if (!primaryChar || !secondaryChar) {
-                console.log("Не найдена одна из необходимых характеристик");
+                compatibilityLogger.log("Не найдена одна из необходимых характеристик");
                 continue; // Пропускаем, если у компонентов нет нужных характеристик
               }
 
@@ -683,7 +706,7 @@ export async function checkComponentsCompatibility(
                       reason = `Несовместимость: ${primaryChar.typeName} (${primaryChar.value}) несовместим с ${secondaryChar.typeName} (${secondaryChar.value})`;
                     }
                   } else {
-                    console.log(
+                    compatibilityLogger.log(
                       `Для типа сравнения ${ruleChar.comparisonType} не найдены значения совместимости`
                     );
                   }
@@ -692,7 +715,7 @@ export async function checkComponentsCompatibility(
 
               // Если найдена несовместимость, прекращаем проверку
               if (!isCompatible) {
-                console.log("Обнаружена несовместимость:", reason);
+                compatibilityLogger.log("Обнаружена несовместимость:", reason);
                 break;
               }
             }
@@ -701,7 +724,7 @@ export async function checkComponentsCompatibility(
             if (!isCompatible) break;
           }
         } else if (rulesQuery.length === 0) {
-          console.log(
+          compatibilityLogger.log(
             `Не найдено правил совместимости для категорий ${comp1.categoryName} и ${comp2.categoryName}. Считаем компоненты совместимыми.`
           );
         }
@@ -747,13 +770,23 @@ export async function checkComponentsCompatibility(
       }
     }
 
-    return {
+    const result = {
       compatible: issues.length === 0,
       issues,
       componentPairs,
     };
+
+    // Сохраняем результат в кэш
+    compatibilityCache.set(cacheKey, result);
+    
+    // Очищаем кэш через TTL (простая реализация)
+    setTimeout(() => {
+      compatibilityCache.delete(cacheKey);
+    }, CACHE_TTL);
+
+    return result;
   } catch (error) {
-    console.error("Ошибка при проверке совместимости:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости:", error);
     throw new Error("Ошибка при проверке совместимости компонентов");
   }
 }
@@ -777,7 +810,7 @@ export async function checkBuildCompatibility(
 
     return await checkComponentsCompatibility(componentsArray);
   } catch (error) {
-    console.error("Error checking build compatibility:", error);
+    compatibilityLogger.error("Error checking build compatibility:", error);
     throw error;
   }
 }
@@ -812,7 +845,7 @@ export async function checkBuildCompatibilitySql(
 
     return compatibilityResult;
   } catch (error) {
-    console.error(
+    compatibilityLogger.error(
       "Error checking build compatibility with SQL function:",
       error
     );
@@ -850,7 +883,7 @@ export async function getBuildCompatibilityResult(
           ? JSON.parse(build.components)
           : build.components;
     } catch (error) {
-      console.error("Ошибка при разборе компонентов сборки:", error);
+      compatibilityLogger.error("Ошибка при разборе компонентов сборки:", error);
       componentsObj = {};
     }
 
@@ -895,7 +928,7 @@ export async function getBuildCompatibilityResult(
       })),
     };
   } catch (error) {
-    console.error("Error getting build compatibility result:", error);
+    compatibilityLogger.error("Error getting build compatibility result:", error);
     throw new Error("Ошибка при получении результата проверки совместимости");
   }
 }
@@ -980,7 +1013,7 @@ export async function getCompatibleComponents(
 
     return compatibleProductIds;
   } catch (error) {
-    console.error("Error getting compatible components:", error);
+    compatibilityLogger.error("Error getting compatible components:", error);
     throw new Error("Ошибка при получении совместимых компонентов");
   }
 }
@@ -994,14 +1027,14 @@ export async function checkAdvancedCompatibility(
   components: Component[]
 ): Promise<CompatibilityResult> {
   try {
-    console.log(
+    compatibilityLogger.log(
       "Запущена улучшенная проверка совместимости для компонентов:",
       components
     );
 
     // Проверяем, что массив компонентов не пустой
     if (!components || components.length < 2) {
-      console.log("Недостаточно компонентов для проверки, нужно минимум 2");
+      compatibilityLogger.log("Недостаточно компонентов для проверки, нужно минимум 2");
       return {
         compatible: true,
         issues: [],
@@ -1131,7 +1164,7 @@ export async function checkAdvancedCompatibility(
       componentPairs,
     };
   } catch (error) {
-    console.error("Ошибка при расширенной проверке совместимости:", error);
+    compatibilityLogger.error("Ошибка при расширенной проверке совместимости:", error);
     throw new Error("Ошибка при улучшенной проверке совместимости компонентов");
   }
 }
@@ -1155,7 +1188,7 @@ export async function checkAdvancedBuildCompatibility(
 
     return await checkAdvancedCompatibility(componentsArray);
   } catch (error) {
-    console.error("Error checking advanced build compatibility:", error);
+    compatibilityLogger.error("Error checking advanced build compatibility:", error);
     throw error;
   }
 }
@@ -1241,7 +1274,7 @@ export async function getAdvancedCompatibleComponents(
 
     return [];
   } catch (error) {
-    console.error("Error getting advanced compatible components:", error);
+    compatibilityLogger.error("Error getting advanced compatible components:", error);
     throw new Error(
       "Ошибка при получении улучшенного списка совместимых компонентов"
     );
@@ -1318,7 +1351,7 @@ export async function checkComponentPairCompatibility(
 
     return { compatible: true, issues: [] };
   } catch (error) {
-    console.error("Error checking component pair compatibility:", error);
+    compatibilityLogger.error("Error checking component pair compatibility:", error);
     throw new Error("Ошибка при проверке совместимости компонентов");
   }
 }
@@ -1534,7 +1567,7 @@ export function checkPowerConnectorsCompatibility(
     // Если все проверки пройдены, разъемы совместимы
     return { compatible: true };
   } catch (error) {
-    console.error("Ошибка при проверке совместимости разъемов питания:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости разъемов питания:", error);
     // Возвращаем совместимость по умолчанию
     return { compatible: true };
   }
@@ -1591,7 +1624,7 @@ export function checkPcieCompatibility(
     // По умолчанию считаем совместимыми, если не смогли точно определить
     return { compatible: true };
   } catch (error) {
-    console.error("Ошибка при проверке совместимости PCIe:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости PCIe:", error);
     return { compatible: true };
   }
 }
@@ -1666,7 +1699,7 @@ export function checkFormFactorCompatibility(
       reason: `Форм-фактор материнской платы ${motherboardFormFactor} не совместим с корпусом ${caseFormFactor}`,
     };
   } catch (error) {
-    console.error("Ошибка при проверке совместимости форм-факторов:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости форм-факторов:", error);
     return { compatible: true };
   }
 }
@@ -1740,7 +1773,7 @@ export function checkStorageCompatibility(
     // По умолчанию считаем совместимым, если не удалось определить тип
     return { compatible: true };
   } catch (error) {
-    console.error("Ошибка при проверке совместимости накопителя:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости накопителя:", error);
     // Возвращаем совместимость по умолчанию при ошибке
     return { compatible: true };
   }
@@ -1844,7 +1877,7 @@ export function checkCoolingCompatibility(
     // Если все проверки пройдены, компоненты совместимы
     return { compatible: true };
   } catch (error) {
-    console.error("Ошибка при проверке совместимости охлаждения:", error);
+    compatibilityLogger.error("Ошибка при проверке совместимости охлаждения:", error);
     // Возвращаем совместимость по умолчанию при ошибке
     return { compatible: true };
   }

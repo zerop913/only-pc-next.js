@@ -8484,7 +8484,7 @@ slash@^3.0.0:
 
 slugify@^1.6.6:
   version "1.6.6"
-  resolved "https://registry.npmjs.org/slugify/-/slugify-1.6.6.tgz"
+  resolved "https://registry.npmjs.org/slugify/-/slugify-1.6.6.tgz#2d4ac0eacb47add6af9e04d3be79319cbcc7924b"
   integrity sha512-h+z7HKHYXj6wJU+AnS/+IH8Uh9fdcX1Lrhg1/VMdf9PwoBQXFcXiAdsy2tSK0P6gKwJLXp02r90ahUCqHk9rrw==
 
 sonner@^2.0.1:

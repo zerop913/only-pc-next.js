@@ -1,6 +1,13 @@
 export interface ProductCharacteristic {
-  type: string;
+  id: number;
+  product_id: number;
+  characteristic_type_id: number;
   value: string;
+  characteristicType?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
 }
 
 export interface Product {

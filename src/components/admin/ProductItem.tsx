@@ -1,12 +1,19 @@
 import { Product } from "@/types/product";
-import { Package, Edit2, ExternalLink } from "lucide-react";
+import { Package, Edit2, ExternalLink, Trash2 } from "lucide-react";
 
 interface ProductItemProps {
   product: Product;
   onClick: () => void;
+  onEdit: (product: Product) => void;
+  onDelete: (product: Product) => void;
 }
 
-export default function ProductItem({ product, onClick }: ProductItemProps) {
+export default function ProductItem({
+  product,
+  onClick,
+  onEdit,
+  onDelete,
+}: ProductItemProps) {
   return (
     <div className="group relative overflow-hidden rounded-xl border border-primary-border bg-gradient-from/10 hover:bg-gradient-from/20 transition-all duration-300">
       {/* Изображение */}
@@ -46,12 +53,22 @@ export default function ProductItem({ product, onClick }: ProductItemProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Здесь будет логика редактирования
+                onEdit(product);
               }}
               className="p-2 text-secondary-light hover:text-blue-400 rounded-lg hover:bg-blue-500/10 transition-colors"
               title="Редактировать"
             >
               <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(product);
+              }}
+              className="p-2 text-secondary-light hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+              title="Удалить"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={onClick}

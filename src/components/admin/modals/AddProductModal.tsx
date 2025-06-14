@@ -15,6 +15,7 @@ interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: CategoryWithChildren[];
+  onSuccess?: () => void;
 }
 
 interface FormData {
@@ -25,13 +26,14 @@ interface FormData {
   brand: string;
   description: string;
   image: File | null;
-  characteristics: Record<number, string>; // Изменили тип на number
+  characteristics: Record<number, string>;
 }
 
 export default function AddProductModal({
   isOpen,
   onClose,
   categories,
+  onSuccess,
 }: AddProductModalProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -53,6 +55,8 @@ export default function AddProductModal({
     useState<CategoryWithChildren | null>(null);
   const [isNewBrand, setIsNewBrand] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   const stepTitles = {
     1: "Выбор категории",
@@ -62,13 +66,16 @@ export default function AddProductModal({
 
   // Получение брендов для выбранной категории
   useEffect(() => {
-    if (formData.categoryId) {
-      // Здесь будет API запрос за брендами
-      fetch(`/api/admin/categories/${formData.categoryId}/brands`)
-        .then((res) => res.json())
-        .then((data) => setBrands(data));
+    if (formData.subcategoryId || formData.categoryId) {
+      // Используем ID подкатегории, если она выбрана, иначе ID основной категории
+      const targetCategoryId = formData.subcategoryId || formData.categoryId;
+      if (targetCategoryId) {
+        fetch(`/api/admin/categories/${targetCategoryId}/brands`)
+          .then((res) => res.json())
+          .then((data) => setBrands(data));
+      }
     }
-  }, [formData.categoryId]);
+  }, [formData.categoryId, formData.subcategoryId]);
 
   // Получение характеристик для выбранной категории
   useEffect(() => {
@@ -81,7 +88,27 @@ export default function AddProductModal({
           .then((data) => setCharacteristics(data));
       }
     }
-  }, [formData.categoryId, formData.subcategoryId]); // Добавляем обе зависимости
+  }, [formData.categoryId, formData.subcategoryId]); // Добавляем обе зависимости  // Управление preview URL изображения
+  useEffect(() => {
+    console.log('Image changed:', formData.image); // Отладка
+    if (formData.image) {
+      // Используем FileReader для создания data URL вместо blob URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        console.log('Created preview data URL'); // Отладка
+        setImagePreviewUrl(dataUrl);
+      };
+      reader.onerror = () => {
+        console.error('Error reading file');
+        setImagePreviewUrl(null);
+      };
+      reader.readAsDataURL(formData.image);
+    } else {
+      console.log('No image, clearing preview URL'); // Отладка
+      setImagePreviewUrl(null);
+    }
+  }, [formData.image]);
 
   const handleCategorySelect = (categoryId: number) => {
     const category = categories.find((c) => c.id === categoryId);
@@ -111,15 +138,81 @@ export default function AddProductModal({
       e.preventDefault();
     }
 
-    console.log("Данные для отправки в БД:", {
-      categoryId: formData.subcategoryId || formData.categoryId,
-      title: formData.title,
-      price: parseFloat(formData.price),
-      brand: formData.brand,
-      description: formData.description,
-      characteristics: formData.characteristics,
-      image: formData.image,
-    });
+    // Валидация обязательных полей
+    if (!formData.title.trim()) {
+      alert("Пожалуйста, введите название товара");
+      return;
+    }
+
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      alert("Пожалуйста, введите корректную цену");
+      return;
+    }
+
+    if (!formData.brand.trim()) {
+      alert("Пожалуйста, выберите или введите бренд");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Создаем FormData для отправки файла
+      const submitFormData = new FormData();
+
+      submitFormData.append(
+        "categoryId",
+        (formData.subcategoryId || formData.categoryId)!.toString()
+      );
+      submitFormData.append("title", formData.title.trim());
+      submitFormData.append("price", formData.price);
+      submitFormData.append("brand", formData.brand.trim());
+      submitFormData.append("description", formData.description.trim());
+
+      // Добавляем изображение, если оно есть
+      if (formData.image) {
+        submitFormData.append("image", formData.image);
+      }
+
+      // Добавляем характеристики
+      submitFormData.append(
+        "characteristics",
+        JSON.stringify(formData.characteristics)
+      );
+
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        body: submitFormData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Ошибка при создании товара");
+      }
+
+      const result = await response.json();
+
+      // Успешное создание товара
+      console.log("Товар успешно создан:", result);
+
+      // Очищаем форму
+      handleClearForm();
+
+      // Вызываем callback для обновления списка
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      // Закрываем модальное окно
+      onClose();
+    } catch (error) {
+      console.error("Ошибка при создании товара:", error);
+      alert(
+        `Ошибка при создании товара: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const canProceed = () => {
@@ -156,8 +249,8 @@ export default function AddProductModal({
           step === stepNumber
             ? "bg-blue-500/20 border-blue-500/30 text-blue-400"
             : canNavigateToStep(stepNumber)
-            ? "hover:bg-gradient-from/20 text-secondary-light hover:text-white"
-            : "opacity-50 cursor-not-allowed text-secondary-light/50"
+              ? "hover:bg-gradient-from/20 text-secondary-light hover:text-white"
+              : "opacity-50 cursor-not-allowed text-secondary-light/50"
         }
         ${
           step === stepNumber
@@ -200,21 +293,27 @@ export default function AddProductModal({
 
   const renderImageUpload = () => (
     <div className="relative aspect-square rounded-lg border-2 border-dashed border-primary-border bg-gradient-from/10 overflow-hidden group">
-      {formData.image ? (
+      {formData.image && imagePreviewUrl ? (
         <div className="w-full h-full relative">
           <img
-            src={URL.createObjectURL(formData.image)}
+            src={imagePreviewUrl}
             alt="Preview"
             className="w-full h-full object-contain"
+            onError={() => {
+              console.error("Error loading image preview");
+              setImagePreviewUrl(null);
+              setFormData((prev) => ({ ...prev, image: null }));
+            }}
           />
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              setImagePreviewUrl(null);
               setFormData((prev) => ({
                 ...prev,
                 image: null,
-              }))
-            }
+              }));
+            }}
             className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
           >
             <span className="text-white text-sm">Удалить</span>
@@ -232,7 +331,21 @@ export default function AddProductModal({
             className="absolute inset-0 opacity-0 cursor-pointer"
             onChange={(e) => {
               const file = e.target.files?.[0];
+              console.log('File selected:', file); // Отладка
               if (file) {
+                // Проверяем тип файла
+                if (!file.type.startsWith('image/')) {
+                  alert('Пожалуйста, выберите файл изображения');
+                  return;
+                }
+                
+                // Проверяем размер файла (максимум 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                  alert('Размер файла не должен превышать 10MB');
+                  return;
+                }
+                
+                console.log('Setting file to formData:', file.name); // Отладка
                 setFormData((prev) => ({
                   ...prev,
                   image: file,
@@ -523,6 +636,9 @@ export default function AddProductModal({
   };
 
   const handleClearForm = () => {
+    // Очищаем preview URL перед очисткой формы
+    setImagePreviewUrl(null);
+    
     setFormData({
       categoryId: null,
       subcategoryId: null,
@@ -622,7 +738,7 @@ export default function AddProductModal({
                   if (step < 3) setStep(step + 1);
                   else handleSubmit();
                 }}
-                disabled={!canProceed()}
+                disabled={!canProceed() || isLoading}
                 className={`ml-auto px-6 py-2.5 rounded-lg flex items-center gap-2
                   ${
                     step === 3
@@ -631,8 +747,17 @@ export default function AddProductModal({
                   }
                   transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <span>{step === 3 ? "Создать товар" : "Продолжить"}</span>
-                {step < 3 && <ChevronRightIcon className="w-5 h-5" />}
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Создание...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{step === 3 ? "Создать товар" : "Продолжить"}</span>
+                    {step < 3 && <ChevronRightIcon className="w-5 h-5" />}
+                  </>
+                )}
               </button>
             </div>
           </div>
