@@ -20,6 +20,7 @@ import { redis } from "@/lib/redis";
 import {
   type Product,
   type ProductCharacteristic,
+  type SimpleProductCharacteristic,
   type CategoryResponse,
 } from "@/types/product";
 import { ProductFilters } from "@/components/configurator/filters/types/filters";
@@ -58,7 +59,7 @@ const createFilterCacheKey = (
 };
 
 // Обновляем маппинг продукта
-const mapProduct = (product: any): Product => ({
+const mapProduct = (product: any): Omit<Product, "characteristics"> => ({
   id: product.id,
   slug: product.slug,
   title: product.title,
@@ -67,7 +68,6 @@ const mapProduct = (product: any): Product => ({
   image: product.image,
   description: product.description,
   categoryId: product.categoryId,
-  characteristics: [],
   createdAt: product.createdAt
     ? new Date(product.createdAt).toISOString()
     : new Date().toISOString(),
@@ -81,7 +81,7 @@ const mapProduct = (product: any): Product => ({
 });
 
 // Исправляем маппинг характеристик
-const mapCharacteristics = (chars: any[]): ProductCharacteristic[] => {
+const mapCharacteristics = (chars: any[]): SimpleProductCharacteristic[] => {
   return chars
     .filter((char) => char.type && char.value) // Фильтруем null значения
     .map(({ type, value }) => ({

@@ -10,6 +10,13 @@ export interface ProductCharacteristic {
   };
 }
 
+// Упрощенный интерфейс для характеристик продукта (для использования в API и компонентах)
+export interface SimpleProductCharacteristic {
+  type: string;
+  value: string;
+  typeSlug?: string;
+}
+
 export interface Product {
   id: number;
   slug: string;
@@ -19,7 +26,7 @@ export interface Product {
   image: string | null;
   description: string | null;
   categoryId: number;
-  characteristics: ProductCharacteristic[];
+  characteristics: SimpleProductCharacteristic[];
   createdAt: string;
   category?: {
     id: number;

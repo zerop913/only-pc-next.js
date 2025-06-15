@@ -49,7 +49,7 @@ export async function PATCH(
         .set({
           ...userData,
           ...(hasUserChanges || hasProfileChanges
-            ? { updatedAt: new Date() }
+            ? { updatedAt: new Date().toISOString() }
             : {}),
         })
         .where(eq(users.id, userId))

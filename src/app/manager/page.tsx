@@ -13,12 +13,15 @@ import {
   Users,
   Settings,
   TrendingUp,
+  Monitor,
 } from "lucide-react";
 
 import OrdersManagement from "@/components/manager/OrdersManagement";
 import DeliveryManagement from "@/components/manager/DeliveryManagement";
 import ClientsManagement from "@/components/manager/ClientsManagement";
 import AnalyticsPanel from "@/components/manager/AnalyticsPanel";
+import BuildsManagement from "@/components/manager/BuildsManagement";
+import BuildsStatistics from "@/components/manager/BuildsStatistics";
 import { PAGE_TITLES } from "@/config/pageTitles";
 
 export default function ManagerPanel() {
@@ -59,6 +62,10 @@ export default function ManagerPanel() {
               <Users className="w-4 h-4 mr-2" />
               <span className="whitespace-nowrap">Клиенты</span>
             </TabsTrigger>
+            <TabsTrigger value="builds">
+              <Monitor className="w-4 h-4 mr-2" />
+              <span className="whitespace-nowrap">Сборки</span>
+            </TabsTrigger>
             <TabsTrigger value="analytics">
               <TrendingUp className="w-4 h-4 mr-2" />
               <span className="whitespace-nowrap">Аналитика</span>
@@ -93,6 +100,18 @@ export default function ManagerPanel() {
                 Управление клиентами
               </h2>
               <ClientsManagement />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="builds">
+            <div className="bg-gradient-from/10 border border-primary-border rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">
+                Управление сборками ПК
+              </h2>
+              <div className="space-y-6">
+                <BuildsStatistics />
+                <BuildsManagement />
+              </div>
             </div>
           </TabsContent>
 

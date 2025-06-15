@@ -1,4 +1,4 @@
-import { Product, ProductCharacteristic } from "./product";
+import { Product, SimpleProductCharacteristic } from "./product";
 
 export interface FavoriteProduct
   extends Omit<Product, "characteristics" | "category"> {
@@ -7,7 +7,7 @@ export interface FavoriteProduct
     name: string;
     slug: string;
   };
-  characteristics: ProductCharacteristic[];
+  characteristics: SimpleProductCharacteristic[];
 }
 
 export interface FavoriteItem {

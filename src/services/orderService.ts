@@ -313,9 +313,7 @@ export async function getOrderById(
       statusId: history.statusId,
       comment: history.comment,
       userId: history.userId,
-      createdAt:
-        history.createdAt ||
-        new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
+      createdAt: history.createdAt || new Date().toISOString(),
       status: {
         id: history.statusId,
         name: history.statusName || "",
@@ -406,12 +404,8 @@ export async function getUserOrders(
         statusId: order.statusId,
         totalPrice: order.totalPrice,
         deliveryPrice: order.deliveryPrice,
-        createdAt:
-          order.createdAt ||
-          new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
-        updatedAt:
-          order.updatedAt ||
-          new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
+        createdAt: order.createdAt || new Date().toISOString(),
+        updatedAt: order.updatedAt || new Date().toISOString(),
         // Добавляем null значения для отсутствующих полей
         deliveryMethodId: null,
         paymentMethodId: null,
@@ -431,12 +425,9 @@ export async function getUserOrders(
   return result as unknown as OrderWithRelations[];
 }
 
-/**
- * Обновление статуса заказа
- */
 export async function updateOrderStatus(
   orderId: number,
-  userId: number,
+  managerUserId: number,
   updateData: UpdateOrderStatusRequest
 ): Promise<{ success: boolean; message?: string }> {
   try {
@@ -462,9 +453,7 @@ export async function updateOrderStatus(
       .update(orders)
       .set({
         statusId: updateData.statusId,
-        updatedAt: new Date().toLocaleString("en-US", {
-          timeZone: "Europe/Moscow",
-        }),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(orders.id, orderId));
 
@@ -473,7 +462,7 @@ export async function updateOrderStatus(
       orderId,
       statusId: updateData.statusId,
       comment: updateData.comment || `Статус изменен на ${status.name}`,
-      userId,
+      userId: null, // Для менеджерских операций не привязываем к конкретному пользователю
     };
 
     await db.insert(orderHistory).values(historyRecord);
@@ -570,12 +559,8 @@ export async function getAllOrders(
           paymentMethodId: null,
           deliveryAddressId: null,
           comment: null,
-          createdAt:
-            order.createdAt ||
-            new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
-          updatedAt:
-            order.updatedAt ||
-            new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
+          createdAt: order.createdAt || new Date().toISOString(),
+          updatedAt: order.updatedAt || new Date().toISOString(),
           status: {
             id: order.statusId,
             name: order.statusName || "",
@@ -592,9 +577,7 @@ export async function getAllOrders(
             // Добавляем недостающие поля
             roleId: 1, // Предполагаем, что это обычный пользователь
             isActive: true,
-            createdAt: new Date().toLocaleString("en-US", {
-              timeZone: "Europe/Moscow",
-            }),
+            createdAt: new Date().toISOString(),
           },
           items: item ? [item] : [],
         };
