@@ -1,7 +1,7 @@
-import { ProductCharacteristic } from "@/types/product";
+import { SimpleProductCharacteristic } from "@/types/product";
 
 interface ProductCharacteristicsProps {
-  characteristics?: ProductCharacteristic[];
+  characteristics?: SimpleProductCharacteristic[];
 }
 
 export default function ProductCharacteristics({
