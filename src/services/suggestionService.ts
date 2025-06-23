@@ -3,7 +3,7 @@ import { products, pcBuilds } from "@/lib/db/schema";
 import { or, ilike } from "drizzle-orm";
 import { redis } from "@/lib/redis";
 
-const CACHE_TTL = 300; // 5 минут
+const CACHE_TTL = 180; // 3 минуты
 
 export async function generateSuggestions(
   query: string,

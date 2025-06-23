@@ -146,12 +146,12 @@ export async function getCurrentUser(token: string) {
       isActive: user.isActive ?? true, // Используем значение по умолчанию если null
     };
 
-    // Увеличиваем время жизни кеша до 24 часов
+    // Кеш пользователя на 2 часа
     await redis.set(
       `user:${user.id}`,
       JSON.stringify(userToCache),
       "EX",
-      24 * 60 * 60 // 24 часа
+      2 * 60 * 60 // 2 часа
     );
 
     return userToCache;

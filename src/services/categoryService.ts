@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { Category, CategoryWithChildren } from "@/types/category";
 import { redis } from "@/lib/redis";
 
-const CACHE_TTL = 3600; // 1 час
+const CACHE_TTL = 900; // 30 минут
 
 export async function getAllCategories(): Promise<CategoryWithChildren[]> {
   // Пробуем получить данные из кеша

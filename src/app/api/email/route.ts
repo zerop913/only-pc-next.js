@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
 
     // Генерируем и сохраняем код
     const code = generateVerificationCode();
-    // Код действителен 5 минут
-    await redis.set(`email_verification:${email}`, code, "EX", 300);
+    // Код действителен 3 минуты
+    await redis.set(`email_verification:${email}`, code, "EX", 180);
 
     // Используем новую функцию для рендеринга письма
     const htmlContent = await renderVerificationEmail(code);

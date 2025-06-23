@@ -6,7 +6,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { redis } from "@/lib/redis";
 
-const CACHE_TTL = 3600; // 1 час
+const CACHE_TTL = 900; // 15 минут
 
 // Интерфейс для представления типа характеристики
 export interface CharacteristicType {

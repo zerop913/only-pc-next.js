@@ -25,8 +25,8 @@ import {
 } from "@/types/product";
 import { ProductFilters } from "@/components/configurator/filters/types/filters";
 
-const CACHE_TTL = 3600; // 1 час
-const FILTERED_CACHE_TTL = 300; // 5 минут для отфильтрованных результатов
+const CACHE_TTL = 900; // 15 минут
+const FILTERED_CACHE_TTL = 120; // 2 минуты для отфильтрованных результатов
 const PAGE_SIZE = 30;
 
 export interface PaginatedProducts {

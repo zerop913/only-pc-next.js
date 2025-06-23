@@ -27,7 +27,7 @@ interface PcBuildProduct extends Omit<Product, "categoryId"> {
   components: Record<string, { name: string; categoryName: string }>;
 }
 
-const CACHE_TTL = 300; // 5 минут для кеша поиска
+const CACHE_TTL = 120; // 2 минуты для кеша поиска
 
 const calculateRelevance = (product: any, searchTerms: string[]) => {
   let score = 0;

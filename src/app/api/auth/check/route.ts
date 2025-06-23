@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     const userId = (payload as any).userId;
 
     if (userId) {
-      // Обновляем статус онлайн в Redis с TTL 5 минут
-      await redis.set(`user:${userId}:online`, "true", "EX", 300);
+      // Обновляем статус онлайн в Redis с TTL 3 минуты
+      await redis.set(`user:${userId}:online`, "true", "EX", 180);
 
       // Сначала получаем текущее значение updatedAt
       const currentUser = await db.query.users.findFirst({
