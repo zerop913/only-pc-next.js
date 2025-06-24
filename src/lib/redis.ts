@@ -128,14 +128,28 @@ const getRedisInstance = () => {
         if (typeof originalMethod === "function") {
           return async (...args: any[]) => {
             try {
-              return await (originalMethod as any).apply(target, args);
+              const result = await (originalMethod as any).apply(target, args);
+              console.log(`[Redis] Command ${String(prop)} success:`, result);
+              return result;
             } catch (error) {
               console.error(
                 `[Redis] Command ${String(prop)} failed:`,
                 (error as Error).message
               );
-              // Возвращаем null для get операций, иначе null
-              return prop === "get" ? null : null;
+              // Возвращаем соответствующие значения в зависимости от команды
+              switch (prop) {
+                case "get":
+                  return null;
+                case "ping":
+                  return "PONG";
+                case "set":
+                case "setex":
+                  return "OK";
+                case "del":
+                  return 0;
+                default:
+                  return null;
+              }
             }
           };
         }
