@@ -99,9 +99,17 @@ export const ConfiguratorProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const response = await fetch(getApiUrl("/api/categories"));
         const data = await response.json();
-        setCategories(data);
+        
+        // Проверяем, что data - это массив
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          console.error("Categories API returned non-array data:", data);
+          setCategories([]);
+        }
       } catch (error) {
         console.error("Failed to fetch categories:", error);
+        setCategories([]);
       } finally {
         setIsLoading(false);
       }

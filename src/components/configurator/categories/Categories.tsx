@@ -31,6 +31,12 @@ const fetcher = async (url: string) => {
     if (!response.ok) {
       // Если сервер вернул ошибку, возвращаем пустой результат вместо выброса исключения
       console.error("Server error:", data.error);
+      
+      // Для categories API возвращаем пустой массив
+      if (url.includes('/api/categories')) {
+        return [];
+      }
+      
       return {
         products: [],
         totalItems: 0,
@@ -39,9 +45,21 @@ const fetcher = async (url: string) => {
       };
     }
 
+    // Дополнительная проверка для categories API
+    if (url.includes('/api/categories') && !Array.isArray(data)) {
+      console.error("Categories API returned non-array data:", data);
+      return [];
+    }
+
     return data;
   } catch (error) {
     console.error("Fetch error:", error);
+    
+    // Для categories API возвращаем пустой массив
+    if (url.includes('/api/categories')) {
+      return [];
+    }
+    
     return {
       products: [],
       totalItems: 0,
