@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 5000",
-    "build": "next build && yarn next-build-size",
+    "build": "next build",
+    "build:dev": "next build && yarn next-build-size",
     "build:vercel": "next build",
     "start": "next start -p 5000",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "next-build-size": "echo Build completed. Checking size... && powershell -Command \"Get-ChildItem -Path .next -Recurse -Filter *.js | Measure-Object -Property Length -Sum | Select-Object Count, @{Name='TotalSizeMB';Expression={[math]::Round($_.Sum/1MB,2)}}\""
+    "next-build-size": "echo 'Build completed. Checking size...' && find .next -name '*.js' -type f -exec wc -c {} + 2>/dev/null || echo 'Size check completed'"
   },
   "dependencies": {
     "@fontsource/montserrat-alternates": "^5.1.1",

@@ -14,6 +14,7 @@ _.map
 _.d.ts.map
 
 # Images (using Cloudinary in production)
+
 /public/images
 
 # IDE files
