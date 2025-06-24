@@ -10,6 +10,7 @@ import Select from "@/components/common/ui/Select";
 import { CategoryWithChildren } from "@/types/category";
 import { ImageIcon, Upload, Package } from "lucide-react";
 import { CategoryCharacteristic, Product } from "@/types/product";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -547,7 +548,7 @@ export default function EditProductModal({
                               <div className="p-4 bg-gradient-from/10 border border-primary-border rounded-lg">
                                 <div className="flex items-center gap-3">
                                   <img
-                                    src={product.image}
+                                    src={getImageUrl(product.image)}
                                     alt="Текущее изображение"
                                     className="w-16 h-16 object-contain rounded-lg border border-primary-border"
                                   />

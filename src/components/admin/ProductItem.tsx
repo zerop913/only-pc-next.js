@@ -1,5 +1,6 @@
 import { Product } from "@/types/product";
 import { Package, Edit2, ExternalLink, Trash2 } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ProductItemProps {
   product: Product;
@@ -21,7 +22,7 @@ export default function ProductItem({
         <div className="relative w-full h-full p-6">
           {product.image ? (
             <img
-              src={product.image}
+              src={getImageUrl(product.image)}
               alt={product.title}
               className="w-full h-full object-contain"
             />

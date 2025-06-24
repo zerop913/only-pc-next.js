@@ -2,6 +2,7 @@ import { Product } from "@/types/product";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { Package } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ProductDetailsModalProps {
   isOpen: boolean;
@@ -71,7 +72,7 @@ export default function ProductDetailsModal({
             <div className="aspect-square rounded-lg border border-primary-border bg-gradient-from/20 flex items-center justify-center overflow-hidden">
               {product.image ? (
                 <img
-                  src={product.image}
+                  src={getImageUrl(product.image)}
                   alt={product.title}
                   className="w-full h-full object-contain"
                 />

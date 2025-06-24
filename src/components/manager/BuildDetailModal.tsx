@@ -13,6 +13,7 @@ import {
   Monitor,
 } from "lucide-react";
 import Button from "@/components/common/Button/Button";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 // Компонент для отображения изображения продукта с fallback
 const ProductImage = ({
@@ -33,7 +34,7 @@ const ProductImage = ({
       {src && !imageError ? (
         <>
           <img
-            src={src}
+            src={getImageUrl(src)}
             alt={alt}
             className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${
               imageLoaded ? "opacity-100" : "opacity-0"
