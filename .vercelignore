@@ -1,0 +1,37 @@
+# Development files
+
+/node_modules
+/.next/cache
+/**tests**
+/docs.md
+/questions.md
+/.env.local
+/.env.development
+
+# Large files and dependencies
+
+_.map
+_.d.ts.map
+
+# Images (using Cloudinary in production)
+/public/images
+
+# IDE files
+
+/.vscode
+/.idea
+_.swp
+_.swo
+
+# Test files
+
+**/\*.test.ts
+**/_.test.tsx
+\*\*/_.spec.ts \*_/_.spec.tsx
+/jest.config.js
+/jest.setup.js
+
+# Documentation
+
+/README.md
+/CHANGELOG.md

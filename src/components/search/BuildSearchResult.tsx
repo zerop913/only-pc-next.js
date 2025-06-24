@@ -9,6 +9,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import Notification from "@/components/common/Notification/Notification";
 import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 // Карта соответствий slug категорий их названиям
 const CATEGORY_NAMES: Record<string, string> = {
@@ -44,11 +45,11 @@ export default function BuildSearchResult({
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] =
-    useState<NotificationType>("success");
-  const getImagePath = (imageSrc: string | undefined): string => {
+    useState<NotificationType>("success");  const getImagePath = (imageSrc: string | undefined): string => {
     if (!imageSrc) return "/icons/case.svg";
     if (imageSrc.startsWith("http")) return imageSrc;
-    return imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    const imagePath = imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    return getImageUrl(imagePath);
   };
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();

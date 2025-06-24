@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ProductGalleryProps {
   image?: string | null;
@@ -9,10 +10,10 @@ interface ProductGalleryProps {
 
 export default function ProductGallery({ image, title }: ProductGalleryProps) {
   const [imageLoading, setImageLoading] = useState(true);
-
   const getImagePath = (imageSrc: string | undefined | null): string => {
     if (!imageSrc) return "";
-    return imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    const imagePath = imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    return getImageUrl(imagePath);
   };
 
   return (

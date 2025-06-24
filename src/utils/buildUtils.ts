@@ -32,24 +32,30 @@ export const calculateBuildPrice = async (
         const response = await fetch(
           `/api/products/${categorySlug}/${productSlug}`
         );
-
         if (!response.ok) {
-          console.error(`Failed to fetch product price for ${productSlug}`);
+          if (process.env.NODE_ENV === "development") {
+            console.error(`Failed to fetch product price for ${productSlug}`);
+          }
           return 0;
         }
 
         const product = await response.json();
         const price = Number(product.price) || 0;
-        console.log(`Price for ${productSlug}:`, price);
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Price for ${productSlug}:`, price);
+        }
         return price;
       }
     );
-
     const prices = await Promise.all(fetchPromises);
     totalPrice = prices.reduce((sum, price) => sum + price, 0);
-    console.log("Total price calculated:", totalPrice);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Total price calculated:", totalPrice);
+    }
   } catch (error) {
-    console.error("Error calculating build price:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error calculating build price:", error);
+    }
   }
 
   return totalPrice;

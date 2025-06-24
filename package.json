@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 5000",
-    "build": "next build",
+    "build": "next build && yarn next-build-size",
+    "build:vercel": "next build",
     "start": "next start -p 5000",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "next-build-size": "echo Build completed. Checking size... && powershell -Command \"Get-ChildItem -Path .next -Recurse -Filter *.js | Measure-Object -Property Length -Sum | Select-Object Count, @{Name='TotalSizeMB';Expression={[math]::Round($_.Sum/1MB,2)}}\""
   },
   "dependencies": {
     "@fontsource/montserrat-alternates": "^5.1.1",
@@ -34,6 +36,7 @@
     "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
     "cookies-next": "^5.1.0",
     "crypto": "^1.0.1",
     "date-fns": "^4.1.0",

@@ -21,6 +21,17 @@ const nextConfig = {
     // Используем текущий домен из сервера как API URL
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "",
   },
+  // Настройки для изображений
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        port: "",
+        pathname: "/donvdhjbe/**",
+      },
+    ],
+  },
   // Добавляем настройки для API запросов на сервере
   experimental: {
     serverActions: {

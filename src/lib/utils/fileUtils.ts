@@ -2,6 +2,7 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import slugify from "slugify";
+import { getImageUrl } from "./imageUtils";
 
 export function createSlug(title: string): string {
   return slugify(title, {
@@ -46,15 +47,17 @@ export async function saveProductImage(
 
     // Конвертируем File в Buffer
     const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Сохраняем файл
+    const buffer = Buffer.from(bytes); // Сохраняем файл
     await writeFile(filePath, buffer);
 
-    // Возвращаем относительный путь для базы данных
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Saved image: ${filePath}`);
+    } // Возвращаем относительный путь для базы данных
     return `/images/${categoryFolder}/${fileName}`;
   } catch (error) {
-    console.error("Error saving product image:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error saving product image:", error);
+    }
     throw new Error("Failed to save product image");
   }
 }
@@ -75,7 +78,9 @@ export async function updateProductImage(
     // Сохраняем новое изображение
     return await saveProductImage(imageFile, productSlug, categorySlug);
   } catch (error) {
-    console.error("Error updating product image:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error updating product image:", error);
+    }
     throw new Error("Failed to update product image");
   }
 }
@@ -84,19 +89,32 @@ export async function updateProductImage(
 export async function deleteProductImage(imagePath: string): Promise<void> {
   try {
     const fullPath = path.join(process.cwd(), "public", imagePath);
-
     if (existsSync(fullPath)) {
       await unlink(fullPath);
-      console.log(`Deleted image: ${fullPath}`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`Deleted image: ${fullPath}`);
+      }
     }
   } catch (error) {
-    console.error("Error deleting product image:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error deleting product image:", error);
+    }
     // Не выбрасываем ошибку, так как это не критично
   }
 }
 
 // Функция для получения пути к изображению товара
 export function getProductImagePath(
+  productSlug: string,
+  categorySlug: string,
+  extension: string = ".jpg"
+): string {
+  const imagePath = `/images/${categorySlug}/${productSlug}${extension}`;
+  return getImageUrl(imagePath);
+}
+
+// Функция для получения базового пути (для сохранения в БД)
+export function getProductImageBasePath(
   productSlug: string,
   categorySlug: string,
   extension: string = ".jpg"

@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import type { OrderStatus, OrderDetailModalProps } from "@/types/orders";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 export default function OrderDetailModal({
   isOpen,
@@ -831,9 +832,10 @@ export default function OrderDetailModal({
                               transition={{ delay: 0.1 * index }}
                               className="p-3 flex items-center space-x-3 hover:bg-gradient-from/5 transition-colors"
                             >
+                              {" "}
                               {item.product?.imageUrl ? (
                                 <img
-                                  src={item.product.imageUrl}
+                                  src={getImageUrl(item.product.imageUrl)}
                                   alt={item.product.name}
                                   className="w-12 h-12 object-contain bg-gradient-from/10 rounded border border-primary-border/50"
                                 />

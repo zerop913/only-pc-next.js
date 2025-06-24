@@ -13,6 +13,7 @@ import { AnimatePresence } from "framer-motion";
 import ReplaceProductModal from "@/components/modals/configurator/ReplaceProductModal";
 import Notification from "@/components/common/Notification/Notification";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ProductCardProps {
   product: Product;
@@ -53,7 +54,15 @@ export default function ProductCard({
 
   const getImagePath = (imageSrc: string | undefined): string => {
     if (!imageSrc) return "";
-    return imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    const imagePath = imageSrc.startsWith("/") ? imageSrc : `/${imageSrc}`;
+    const result = getImageUrl(imagePath);
+
+    // Отладочная информация для первых нескольких продуктов
+    if (process.env.NODE_ENV === "development") {
+      console.log(`🔍 ProductCard[${product.id}]: ${imagePath} -> ${result}`);
+    }
+
+    return result;
   };
 
   const handleCardClick = (e: React.MouseEvent) => {

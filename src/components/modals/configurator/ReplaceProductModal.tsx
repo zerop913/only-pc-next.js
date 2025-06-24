@@ -3,6 +3,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Product } from "@/types/product";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ReplaceProductModalProps {
   currentProduct: Product;
@@ -14,14 +15,13 @@ interface ReplaceProductModalProps {
 const ProductCard = ({ product }: { product: Product }) => (
   <div className="p-4 bg-gradient-from/20 rounded-lg border border-primary-border">
     <div className="flex items-center gap-4">
-      <div className="relative w-20 h-20 flex-shrink-0">
-        {product.image ? (
+      <div className="relative w-20 h-20 flex-shrink-0">        {product.image ? (
           <Image
-            src={
+            src={getImageUrl(
               product.image.startsWith("/")
                 ? product.image
                 : `/${product.image}`
-            }
+            )}
             alt={product.title}
             fill
             className="object-contain rounded-lg"

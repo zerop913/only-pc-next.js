@@ -6,6 +6,7 @@ import { useFavorites } from "@/contexts/FavoritesContext";
 import { useState } from "react";
 import Notification from "@/components/common/Notification/Notification";
 import { motion } from "framer-motion";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ProductCardProps {
   favoriteItem: FavoriteItem;
@@ -67,7 +68,6 @@ export default function ProductCard({
       setIsRemoving(false);
     }
   };
-
   // Обрабатываем путь к изображению
   const getImagePath = (): string => {
     if (!product.image) return "";
@@ -78,7 +78,12 @@ export default function ProductCard({
     }
 
     // Добавляем слеш в начале, если его нет
-    return product.image.startsWith("/") ? product.image : `/${product.image}`;
+    const imagePath = product.image.startsWith("/")
+      ? product.image
+      : `/${product.image}`;
+
+    // Используем функцию getImageUrl для автоматической конвертации в Cloudinary
+    return getImageUrl(imagePath);
   };
 
   return (

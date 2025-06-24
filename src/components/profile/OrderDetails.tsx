@@ -18,6 +18,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 import { useOrderStatuses } from "@/hooks/useOrderStatuses";
 import { generateStatusStyles } from "@/utils/statusStyles";
 
@@ -237,9 +238,11 @@ export function OrderDetails({ order: initialOrder }: OrderDetailsProps) {
                         src={(() => {
                           // Проверяем наличие поля image в buildSnapshot
                           if (item.buildSnapshot?.image) {
-                            return item.buildSnapshot.image.startsWith("/")
-                              ? item.buildSnapshot.image
-                              : `/${item.buildSnapshot.image}`;
+                            const imagePath =
+                              item.buildSnapshot.image.startsWith("/")
+                                ? item.buildSnapshot.image
+                                : `/${item.buildSnapshot.image}`;
+                            return getImageUrl(imagePath);
                           }
 
                           // Проверяем компоненты
@@ -251,11 +254,15 @@ export function OrderDetails({ order: initialOrder }: OrderDetailsProps) {
                               typeof components.korpusa === "object" &&
                               components.korpusa.name
                             ) {
-                              return `/images/korpusa/${components.korpusa.name}.jpg`;
+                              return getImageUrl(
+                                `/images/korpusa/${components.korpusa.name}.jpg`
+                              );
                             }
                             // Если это строка (slug)
                             else if (typeof components.korpusa === "string") {
-                              return `/images/korpusa/${components.korpusa}.jpg`;
+                              return getImageUrl(
+                                `/images/korpusa/${components.korpusa}.jpg`
+                              );
                             }
                           }
 
