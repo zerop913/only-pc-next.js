@@ -47,11 +47,11 @@ const getRedisInstance = () => {
         { length: REDIS_CONNECTION_POOL_SIZE },
         (_, index) => {
           const instance = new IORedis(redisUrl, {
-              maxRetriesPerRequest: 2,
+              maxRetriesPerRequest: 3,
               enableReadyCheck: false,
               retryStrategy(times) {
                 // Ограничиваем количество попыток переподключения
-                if (times > 2) {
+                if (times > 3) {
                   console.log(
                     `[Redis] Max retries reached for instance ${index}`
                   );
@@ -61,11 +61,13 @@ const getRedisInstance = () => {
                 return delay;
               },
               lazyConnect: true,
-              connectTimeout: 10000, // 10 секунд таймаут
-              commandTimeout: 5000, // 5 секунд на команду
+              connectTimeout: 15000, // 15 секунд таймаут
+              commandTimeout: 10000, // 10 секунд на команду
               keepAlive: 30000, // 30 секунд keep-alive
               family: 4, // Используем IPv4
               enableOfflineQueue: false, // Отключаем очередь офлайн команд
+              // Добавляем TLS для Upstash
+              tls: redisUrl.includes('upstash.io') ? {} : undefined,
             }
           );
 

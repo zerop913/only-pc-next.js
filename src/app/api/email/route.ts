@@ -38,8 +38,8 @@ async function safeStorageSet(
     console.log(`[Storage] Redis ping result: ${pingResult}`);
     
     console.log(`[Storage] Setting key in Redis: ${key}`);
-    const setResult = await redis.set(key, value, "EX", ttlSeconds);
-    console.log(`[Storage] Redis set result: ${setResult}`);
+    const setResult = await redis.setex(key, ttlSeconds, value);
+    console.log(`[Storage] Redis setex result: ${setResult}`);
     
     console.log(`[Storage] Successfully used Redis for storing ${key}`);
   } catch (redisError) {
