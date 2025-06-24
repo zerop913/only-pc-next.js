@@ -7,6 +7,7 @@ import SearchRelevance from "@/components/search/SearchRelevance";
 import { Product } from "@/types/product";
 import { ShoppingCartIcon } from "@heroicons/react/24/outline";
 import { useCart } from "@/contexts/CartContext";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface SearchResultsProps {
   results: SearchResponse & { query: string };
@@ -107,13 +108,13 @@ const SearchResults = ({ results, onViewAll, onClose }: SearchResultsProps) => {
                         {" "}
                         {item.image ? (
                           <Image
-                            src={
+                            src={getImageUrl(
                               item.image.startsWith("http")
                                 ? item.image
                                 : item.image.startsWith("/")
                                   ? item.image
                                   : `/${item.image}`
-                            }
+                            )}
                             alt={item.title}
                             fill
                             className="object-contain rounded"

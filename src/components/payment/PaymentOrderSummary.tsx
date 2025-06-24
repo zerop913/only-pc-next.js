@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ShoppingBagIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface PaymentOrderSummaryProps {
   orderData: {
@@ -37,11 +38,19 @@ export default function PaymentOrderSummary({
   }
 
   // Вспомогательная функция для отображения изображений
-  const getImageUrl = (item: any) => {
+  const getImageUrlForPayment = (item: any) => {
     if (!item.image) {
       return "/icons/case.svg";
     }
-    return item.image.startsWith("http") ? item.image : `/${item.image}`;
+
+    // Если это уже полный URL, возвращаем как есть
+    if (item.image.startsWith("http")) {
+      return item.image;
+    }
+
+    // Нормализуем путь и используем getImageUrl для Cloudinary
+    const imagePath = item.image.startsWith("/") ? item.image : `/${item.image}`;
+    return getImageUrl(imagePath);
   };
 
   // Получаем подытог (сумма товаров без доставки)
@@ -97,7 +106,7 @@ export default function PaymentOrderSummary({
             <div key={index} className="flex gap-4">
               <div className="relative w-16 h-16 bg-gradient-from/10 rounded-lg border border-primary-border overflow-hidden">
                 <Image
-                  src={getImageUrl(item)}
+                  src={getImageUrlForPayment(item)}
                   alt={item.name}
                   fill
                   sizes="64px"

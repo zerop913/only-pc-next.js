@@ -7,6 +7,7 @@ import { formatPrice } from "@/utils/formatters";
 import BuildCarousel from "./BuildCarousel";
 import Image from "next/image";
 import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface BuildCardProps {
   build: PcBuildResponse;
@@ -56,7 +57,7 @@ const BuildCard: React.FC<BuildCardProps> = ({ build, categories }) => {
                   image: product.image
                     ? product.image.startsWith("http")
                       ? product.image
-                      : `/${product.image}`
+                      : getImageUrl(product.image.startsWith("/") ? product.image : `/${product.image}`)
                     : null,
                   categoryName: category?.name || categorySlug,
                   categoryIcon: category?.icon,

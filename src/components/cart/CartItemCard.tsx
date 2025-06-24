@@ -11,6 +11,7 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useCart } from "@/contexts/CartContext";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 type CartItemProps = {
   item: {
@@ -44,19 +45,19 @@ export default function CartItemCard({ item }: CartItemProps) {
     }
   };
 
-  const getImageUrl = () => {
+  const getImageUrlForCart = () => {
     if (!item.image) {
       return "/icons/case.svg";
     }
 
-    if (typeof item.image === "string") {
-      if (item.image.startsWith("http")) {
-        return item.image;
-      }
-      return `/${item.image}`;
+    // Если это уже полный URL, возвращаем как есть
+    if (item.image.startsWith("http")) {
+      return item.image;
     }
 
-    return "/icons/case.svg";
+    // Нормализуем путь и используем getImageUrl для Cloudinary
+    const imagePath = item.image.startsWith("/") ? item.image : `/${item.image}`;
+    return getImageUrl(imagePath);
   };
 
   const isPc = item.type === "build";
@@ -75,7 +76,7 @@ export default function CartItemCard({ item }: CartItemProps) {
         <Link href={itemLink} className="block">
           <div className="w-full sm:w-36 h-36 relative bg-gradient-from/20 rounded-lg overflow-hidden border border-primary-border/40 flex-shrink-0">
             <Image
-              src={getImageUrl()}
+              src={getImageUrlForCart()}
               alt={item.name}
               fill
               className="object-contain p-2"

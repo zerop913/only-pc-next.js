@@ -27,6 +27,7 @@ import {
 import { CATEGORY_PRIORITIES, CategorySlug } from "@/config/categoryPriorities";
 import { useCart } from "@/contexts/CartContext";
 import { PAGE_TITLES } from "@/config/pageTitles";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface DetailedComponent {
   category: Category;
@@ -43,8 +44,10 @@ const formatImagePath = (
 ): string => {
   if (!imagePath) return "";
   if (imagePath.startsWith("http")) return imagePath;
-  if (imagePath.startsWith("/")) return imagePath;
-  return `/${imagePath}`;
+  
+  // Нормализуем путь и используем getImageUrl для Cloudinary
+  const normalizedPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+  return getImageUrl(normalizedPath);
 };
 
 const getUserName = (build: DetailedBuild) => {

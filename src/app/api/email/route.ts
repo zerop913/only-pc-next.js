@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { redis } from "@/lib/redis";
 import { renderVerificationEmail } from "@/lib/utils/emailRenderer";
+import { getInMemoryStorage } from "@/lib/inMemoryStorage";
 
 // Инициализация Resend API
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -9,6 +10,94 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Функция для генерации кода верификации
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Функция для безопасного использования хранилища с fallback
+async function safeStorageSet(
+  key: string,
+  value: string,
+  ttlSeconds: number
+): Promise<void> {
+  // В development режиме без Redis URL используем in-memory storage
+  if (process.env.NODE_ENV === "development" && !process.env.REDIS_URL) {
+    console.log(
+      `[Storage] Development mode, using in-memory storage for ${key}`
+    );
+    const inMemory = getInMemoryStorage();
+    await inMemory.set(
+      key.replace("email_verification:", ""),
+      value,
+      ttlSeconds
+    );
+    return;
+  }
+
+  try {
+    await redis.ping();
+    await redis.set(key, value, "EX", ttlSeconds);
+    console.log(`[Storage] Used Redis for storing ${key}`);
+  } catch (redisError) {
+    console.warn(
+      `[Storage] Redis failed, using in-memory storage:`,
+      redisError
+    );
+    const inMemory = getInMemoryStorage();
+    await inMemory.set(
+      key.replace("email_verification:", ""),
+      value,
+      ttlSeconds
+    );
+  }
+}
+
+async function safeStorageGet(key: string): Promise<string | null> {
+  // В development режиме без Redis URL используем in-memory storage
+  if (process.env.NODE_ENV === "development" && !process.env.REDIS_URL) {
+    console.log(
+      `[Storage] Development mode, using in-memory storage for ${key}`
+    );
+    const inMemory = getInMemoryStorage();
+    return await inMemory.get(key.replace("email_verification:", ""));
+  }
+
+  try {
+    await redis.ping();
+    const result = await redis.get(key);
+    console.log(`[Storage] Used Redis for retrieving ${key}`);
+    return result;
+  } catch (redisError) {
+    console.warn(
+      `[Storage] Redis failed, using in-memory storage:`,
+      redisError
+    );
+    const inMemory = getInMemoryStorage();
+    return await inMemory.get(key.replace("email_verification:", ""));
+  }
+}
+
+async function safeStorageDelete(key: string): Promise<void> {
+  // В development режиме без Redis URL используем in-memory storage
+  if (process.env.NODE_ENV === "development" && !process.env.REDIS_URL) {
+    console.log(
+      `[Storage] Development mode, using in-memory storage for ${key}`
+    );
+    const inMemory = getInMemoryStorage();
+    await inMemory.delete(key.replace("email_verification:", ""));
+    return;
+  }
+
+  try {
+    await redis.ping();
+    await redis.del(key);
+    console.log(`[Storage] Used Redis for deleting ${key}`);
+  } catch (redisError) {
+    console.warn(
+      `[Storage] Redis failed, using in-memory storage:`,
+      redisError
+    );
+    const inMemory = getInMemoryStorage();
+    await inMemory.delete(key.replace("email_verification:", ""));
+  }
 }
 
 // Обработчик запросов на отправку кода подтверждения
@@ -20,10 +109,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email не указан" }, { status: 400 });
     }
 
-    // Генерируем и сохраняем код
+    // Генерируем код
     const code = generateVerificationCode();
-    // Код действителен 3 минуты
-    await redis.set(`email_verification:${email}`, code, "EX", 180);
+    console.log("Generated verification code:", {
+      email,
+      code,
+      codeType: typeof code,
+    });
+
+    // Сохраняем код с fallback (5 минут TTL)
+    try {
+      await safeStorageSet(`email_verification:${email}`, code, 300);
+
+      // Проверяем, что код сохранился
+      const savedCode = await safeStorageGet(`email_verification:${email}`);
+      console.log("Code saved verification:", {
+        email,
+        savedCode,
+        originalCode: code,
+      });
+
+      if (!savedCode) {
+        throw new Error("Failed to save verification code");
+      }
+    } catch (storageError) {
+      console.error("Storage error:", storageError);
+      return NextResponse.json(
+        { error: "Не удалось сохранить код верификации. Попробуйте позже." },
+        { status: 503 }
+      );
+    }
 
     // Используем новую функцию для рендеринга письма
     const htmlContent = await renderVerificationEmail(code);
@@ -42,7 +157,11 @@ export async function POST(request: NextRequest) {
       throw new Error(`Ошибка отправки кода: ${error.message}`);
     }
 
-    return NextResponse.json({ success: true });
+    console.log("Verification email sent successfully to:", email);
+    return NextResponse.json({
+      success: true,
+      codeForDebug: process.env.NODE_ENV === "development" ? code : undefined,
+    });
   } catch (error: any) {
     console.error("Ошибка отправки кода:", error);
     return NextResponse.json(
@@ -59,6 +178,13 @@ export async function PUT(request: NextRequest) {
   try {
     const { email, code } = await request.json();
 
+    console.log("PUT /api/email - Code verification request:", {
+      email,
+      code,
+      codeType: typeof code,
+      codeLength: code?.length,
+    });
+
     if (!email || !code) {
       return NextResponse.json(
         { error: "Не указан email или код подтверждения" },
@@ -66,23 +192,48 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const storedCode = await redis.get(`email_verification:${email}`);
-    console.log("Stored code vs Provided code:", { storedCode, code });
+    // Получаем сохраненный код с fallback
+    const storedCode = await safeStorageGet(`email_verification:${email}`);
+
+    console.log("Email verification debug:", {
+      email,
+      providedCode: code,
+      providedCodeType: typeof code,
+      storedCode,
+      storedCodeType: typeof storedCode,
+      redisKey: `email_verification:${email}`,
+    });
 
     if (!storedCode) {
+      console.error("No stored code found for email:", email);
       return NextResponse.json(
         { error: "Код подтверждения истек или не существует" },
         { status: 400 }
       );
     }
 
+    // Нормализуем оба кода к строкам и убираем возможные пробелы
+    const normalizedStoredCode = String(storedCode).trim();
+    const normalizedProvidedCode = String(code).trim();
+
+    console.log("Normalized codes:", {
+      normalizedStoredCode,
+      normalizedProvidedCode,
+      isEqual: normalizedStoredCode === normalizedProvidedCode,
+    });
+
     // Проверка кода
-    const isValid = String(storedCode) === String(code);
+    const isValid = normalizedStoredCode === normalizedProvidedCode;
 
     if (isValid) {
-      await redis.del(`email_verification:${email}`);
+      console.log("Code verification successful, deleting from storage");
+      await safeStorageDelete(`email_verification:${email}`);
       return NextResponse.json({ success: true });
     } else {
+      console.error("Code verification failed", {
+        expected: normalizedStoredCode,
+        received: normalizedProvidedCode,
+      });
       return NextResponse.json(
         { error: "Неверный код подтверждения" },
         { status: 400 }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { CircularProgressBar } from "./CircularProgressBar";
 import { Package } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface ComponentImage {
   image: string | null;
@@ -129,7 +130,7 @@ const BuildCarousel: React.FC<BuildCarouselProps> = ({
                     transition={{ duration: 0.5, ease: "easeInOut" }}
                   >
                     <Image
-                      src={image.image}
+                      src={getImageUrl(image.image)}
                       alt={image.title || "Компонент"}
                       fill
                       sizes="(max-width: 768px) 100vw, 400px"

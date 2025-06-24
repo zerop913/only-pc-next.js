@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { useCheckout } from "@/contexts/CheckoutContext";
+import { getImageUrl } from "@/lib/utils/imageUtils";
 
 interface OrderSummaryProps {
   cartItems: any[];
@@ -31,19 +32,19 @@ export default function OrderSummary({
   const deliveryPriceNumber = parseFloat(deliveryPrice) || 0;
   const total = subtotal + deliveryPriceNumber;
 
-  const getImageUrl = (item: any) => {
+  const getImageUrlForOrder = (item: any) => {
     if (!item.image) {
       return "/icons/case.svg";
     }
 
-    if (typeof item.image === "string") {
-      if (item.image.startsWith("http")) {
-        return item.image;
-      }
-      return `/${item.image}`;
+    // Если это уже полный URL, возвращаем как есть
+    if (item.image.startsWith("http")) {
+      return item.image;
     }
 
-    return "/icons/case.svg";
+    // Нормализуем путь и используем getImageUrl для Cloudinary
+    const imagePath = item.image.startsWith("/") ? item.image : `/${item.image}`;
+    return getImageUrl(imagePath);
   };
 
   return (
@@ -70,7 +71,7 @@ export default function OrderSummary({
             >
               <div className="w-16 h-16 bg-gradient-from/10 rounded-lg border border-primary-border flex items-center justify-center overflow-hidden shrink-0">
                 <Image
-                  src={getImageUrl(item)}
+                  src={getImageUrlForOrder(item)}
                   alt={item.name}
                   width={48}
                   height={48}

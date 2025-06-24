@@ -28,7 +28,7 @@ export default function VerifyPage() {
 
     // Проверяем, есть ли сохраненное время окончания в sessionStorage
     const endTime = sessionStorage.getItem("verificationEndTime");
-    let initialTimeLeft = 300; // 5 минут по умолчанию
+    let initialTimeLeft = 300; // 5 минут по умолчанию (изменено с 3 на 5 минут)
 
     if (endTime) {
       const now = Math.floor(Date.now() / 1000); // текущее время в секундах
@@ -251,11 +251,19 @@ export default function VerifyPage() {
 
       const email = sessionStorage.getItem("verificationEmail");
 
-      // Логика изменена - пароль уже проверен при отправке кода
-      console.log("Verifying code for email:", email);
+      console.log("verify page - Starting verification:", {
+        email,
+        fullCode,
+        codeLength: fullCode.length,
+        codeArray: code,
+      });
 
       if (!email) {
         throw new Error("Email для верификации не найден");
+      }
+
+      if (fullCode.length !== 6) {
+        throw new Error("Код должен содержать 6 цифр");
       }
 
       const response = await fetch("/api/auth/verify-code", {
@@ -267,11 +275,18 @@ export default function VerifyPage() {
         }),
       });
 
+      console.log("verify page - Response status:", response.status);
+
       const data = await response.json();
+      console.log("verify page - Response data:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Ошибка проверки кода");
+        throw new Error(
+          data.error || `Ошибка проверки кода (${response.status})`
+        );
       }
+
+      console.log("verify page - Verification successful, redirecting...");
 
       // Очищаем sessionStorage и перенаправляем
       sessionStorage.removeItem("verificationEmail");
@@ -281,8 +296,8 @@ export default function VerifyPage() {
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Произошла ошибка";
+      console.error("verify page - Verification error:", err);
       setError(errorMessage);
-      console.error("Verification error:", err);
       setCode(["", "", "", "", "", ""]);
       // Фокусируемся на первой ячейке после ошибки
       inputRefs.current[0]?.focus();

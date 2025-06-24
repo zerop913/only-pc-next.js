@@ -3,15 +3,25 @@ export function getApiUrl(path: string): string {
   if (typeof window === "undefined") {
     // На сервере всегда используем абсолютный URL для API запросов
     if (path.startsWith("/api/")) {
-      // Получаем домен из переменных окружения или используем локальный сервер для разработки
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-      return `${baseUrl}${path}`;
+      // Получаем домен из переменных окружения
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+      if (baseUrl) {
+        console.log(`[apiUtils] Server-side API call: ${baseUrl}${path}`);
+        return `${baseUrl}${path}`;
+      } else {
+        // Fallback на localhost для разработки
+        console.warn(
+          "[apiUtils] NEXT_PUBLIC_API_BASE_URL not set, using localhost"
+        );
+        return `http://localhost:3000${path}`;
+      }
     }
     return path;
   }
 
   // В браузере используем относительные пути
+  console.log(`[apiUtils] Client-side API call: ${path}`);
   return path;
 }
 

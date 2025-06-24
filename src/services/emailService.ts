@@ -12,12 +12,27 @@ export const verifyCode = async (
       // На сервере используем абсолютный URL из API_BASE_URL
       const { getApiUrl } = await import("@/utils/apiUtils");
       apiUrl = getApiUrl("/api/email");
+      console.log(
+        `[emailService] Server-side verification, using URL: ${apiUrl}`
+      );
     } else {
       // В браузере используем относительный путь
       apiUrl = "/api/email";
+      console.log(
+        `[emailService] Client-side verification, using URL: ${apiUrl}`
+      );
     }
 
-    console.log("Verifying code using API URL:", apiUrl);
+    console.log(
+      "emailService.verifyCode - Verifying code using API URL:",
+      apiUrl,
+      {
+        email,
+        code,
+        isServer: typeof window === "undefined",
+        origin,
+      }
+    );
 
     const response = await fetch(apiUrl, {
       method: "PUT",
@@ -28,9 +43,26 @@ export const verifyCode = async (
     });
 
     const result = await response.json();
+
+    console.log("emailService.verifyCode - Response:", {
+      status: response.status,
+      ok: response.ok,
+      result,
+      url: apiUrl,
+    });
+
+    if (!response.ok) {
+      console.error("emailService.verifyCode - Verification failed:", {
+        status: response.status,
+        error: result,
+        url: apiUrl,
+      });
+      return false;
+    }
+
     return result.success === true;
   } catch (error) {
-    console.error("Error verifying code:", error);
+    console.error("emailService.verifyCode - Error verifying code:", error);
     return false;
   }
 };
