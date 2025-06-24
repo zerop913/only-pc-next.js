@@ -33,20 +33,30 @@ async function safeStorageSet(
   }
 
   try {
-    await redis.ping();
-    await redis.set(key, value, "EX", ttlSeconds);
-    console.log(`[Storage] Used Redis for storing ${key}`);
+    console.log(`[Storage] Attempting Redis ping for ${key}`);
+    const pingResult = await redis.ping();
+    console.log(`[Storage] Redis ping result: ${pingResult}`);
+    
+    console.log(`[Storage] Setting key in Redis: ${key}`);
+    const setResult = await redis.set(key, value, "EX", ttlSeconds);
+    console.log(`[Storage] Redis set result: ${setResult}`);
+    
+    console.log(`[Storage] Successfully used Redis for storing ${key}`);
   } catch (redisError) {
-    console.warn(
-      `[Storage] Redis failed, using in-memory storage:`,
-      redisError
+    console.error(
+      `[Storage] Redis failed for ${key}:`,
+      redisError instanceof Error ? redisError.message : redisError
     );
+    console.error(`[Storage] Redis error stack:`, redisError instanceof Error ? redisError.stack : 'No stack');
+    console.warn(`[Storage] Falling back to in-memory storage for ${key}`);
+    
     const inMemory = getInMemoryStorage();
     await inMemory.set(
       key.replace("email_verification:", ""),
       value,
       ttlSeconds
     );
+    console.log(`[Storage] Successfully used in-memory storage for ${key}`);
   }
 }
 
@@ -61,17 +71,27 @@ async function safeStorageGet(key: string): Promise<string | null> {
   }
 
   try {
-    await redis.ping();
+    console.log(`[Storage] Attempting Redis ping for get ${key}`);
+    const pingResult = await redis.ping();
+    console.log(`[Storage] Redis ping result: ${pingResult}`);
+    
+    console.log(`[Storage] Getting key from Redis: ${key}`);
     const result = await redis.get(key);
-    console.log(`[Storage] Used Redis for retrieving ${key}`);
+    console.log(`[Storage] Redis get result for ${key}: ${result ? 'found' : 'not found'}`);
+    
+    console.log(`[Storage] Successfully used Redis for retrieving ${key}`);
     return result;
   } catch (redisError) {
-    console.warn(
-      `[Storage] Redis failed, using in-memory storage:`,
-      redisError
+    console.error(
+      `[Storage] Redis failed for get ${key}:`,
+      redisError instanceof Error ? redisError.message : redisError
     );
+    console.warn(`[Storage] Falling back to in-memory storage for ${key}`);
+    
     const inMemory = getInMemoryStorage();
-    return await inMemory.get(key.replace("email_verification:", ""));
+    const result = await inMemory.get(key.replace("email_verification:", ""));
+    console.log(`[Storage] In-memory get result for ${key}: ${result ? 'found' : 'not found'}`);
+    return result;
   }
 }
 
@@ -119,19 +139,28 @@ export async function POST(request: NextRequest) {
 
     // Сохраняем код с fallback (5 минут TTL)
     try {
+      console.log(`[Email] Attempting to save verification code for ${email}`);
       await safeStorageSet(`email_verification:${email}`, code, 300);
 
       // Проверяем, что код сохранился
+      console.log(`[Email] Verifying code was saved for ${email}`);
       const savedCode = await safeStorageGet(`email_verification:${email}`);
       console.log("Code saved verification:", {
         email,
         savedCode,
         originalCode: code,
+        match: savedCode === code,
       });
 
       if (!savedCode) {
-        throw new Error("Failed to save verification code");
+        throw new Error("Failed to save verification code - code not found after save");
       }
+      
+      if (savedCode !== code) {
+        throw new Error(`Failed to save verification code - mismatch: expected ${code}, got ${savedCode}`);
+      }
+      
+      console.log(`[Email] Verification code successfully saved and verified for ${email}`);
     } catch (storageError) {
       console.error("Storage error:", storageError);
       return NextResponse.json(

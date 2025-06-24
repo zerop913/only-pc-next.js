@@ -36,13 +36,17 @@ const getRedisInstance = () => {
 
   if (!globalForRedis.redisPool) {
     console.log("[Redis] Creating new Redis connection pool");
+    console.log("[Redis] REDIS_URL configured:", !!process.env.REDIS_URL);
+    console.log("[Redis] NODE_ENV:", process.env.NODE_ENV);
+    
     try {
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      console.log("[Redis] Connecting to:", redisUrl.replace(/:[^:@]*@/, ':***@')); // Маскируем пароль в логах
+      
       const redisInstances = Array.from(
         { length: REDIS_CONNECTION_POOL_SIZE },
         (_, index) => {
-          const instance = new IORedis(
-            process.env.REDIS_URL || "redis://localhost:6379",
-            {
+          const instance = new IORedis(redisUrl, {
               maxRetriesPerRequest: 2,
               enableReadyCheck: false,
               retryStrategy(times) {
